@@ -1,0 +1,18 @@
+{
+  "gE_kc": 4.0,
+  "gE_apl": 30.0,
+  "gI_kc": 16.0,
+  "gE_mbon": 80.0,
+  "gI_mbon": 4.0,
+  "odour_drive": 1.6,
+  "odour_fraction": 0.25,
+  "dan_drive": 1.6,
+  "eta": 0.02,
+  "f_min": 0.05,
+  "tau_forget": 30000.0,
+  "kc_kc_current": 0.0,
+  "tau_s": 6.0,
+  "threshold_jitter": 0.2,
+  "noise_std": 0.05,
+  "_note": "Tuned 2026-09-20 with scripts/probe_mb_sweep.py + probe_mb_dyn.py. Kenyon-cell code 5-8 % of cells per odour, odour overlap near chance, stable across presentations. Three odour+sugar pairings move an odour's preference from ~0 to +0.45; a control odour is untouched; three odour+shock pairings take another odour to -0.6 while the first stays learned. What mattered: (1) glomerulus equalisation (PN->KC synapses per glomerulus vary 30x in this fly); (2) KC->KC axo-axonal contacts (58 % of KC synapses by count) kept out of the fast current, or the PN signal is diluted 5x; (3) APL feedback needs gain ~30 to fire at 5 % KC activity and enforce sparsity."
+}

@@ -1,0 +1,24 @@
+# The dataset (~560 MB) and everything built from it: fetch with
+# scripts/01_download_data.py, rebuild with scripts/03_* and 05_*.
+# The tuned gains (params.json) are tiny and needed to reproduce the
+# behaviour, so they stay in.
+data/*
+!data/compass/
+data/compass/*
+!data/compass/params.json
+!data/mushroom/
+data/mushroom/*
+!data/mushroom/params.json
+
+# Environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,19 @@
+[project]
+name = "fly-brain"
+version = "0.2.0"
+description = "Two circuits of the MaleCNS v1.0 fruit-fly connectome as live spiking simulations: a compass that remembers without learning, and a learning centre that learns."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "pandas>=2.1",
+    "pyarrow>=15",
+    "aiohttp>=3.9",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

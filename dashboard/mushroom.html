@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Fly Learning — Pavlov on the real wiring</title>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #141925; --raster: #05070c;
+    --primary: #7dd3fc; --secondary: #a78bfa; --text: #e5e7eb; --text-2: #b4b9c3;
+    --muted: #6b7280; --border: rgba(255,255,255,0.06);
+    --approach: #38bdf8; --avoid: #fbbf24; --reward: #34d399; --punish: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(circle at top, #131826 0%, var(--bg) 60%); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 24px; min-height: 100vh; }
+  h1 { font-size: 20px; margin: 0 0 4px 0; background: linear-gradient(90deg, var(--primary), var(--secondary));
+       -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--panel); border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+          border: 1px solid var(--border); min-width: 0; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px 0; }
+  canvas { width: 100%; display: block; border-radius: 8px; background: var(--raster); }
+  #kc { aspect-ratio: 1 / 1; max-height: 560px; margin: 0 auto; }
+  #trace { height: 150px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .hint b { color: var(--text-2); font-weight: 600; }
+  .controls { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button { background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: #0b0e14;
+           font-weight: 600; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; user-select: none; }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,0.15); }
+  button.odour { background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,0.18); font-size: 15px; padding: 12px; }
+  button.odour.on { background: rgba(125,211,252,0.18); border-color: var(--primary); box-shadow: 0 0 0 2px rgba(125,211,252,0.35) inset; }
+  button.reward { background: var(--reward); } button.punish { background: var(--punish); }
+  button.hold.on { filter: brightness(1.25); box-shadow: 0 0 0 3px rgba(255,255,255,0.35) inset; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .pref { margin-top: 12px; }
+  .pref .line { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 12px; }
+  .pref .name { width: 64px; color: var(--text-2); font-weight: 600; }
+  .pref .bar { flex: 1; position: relative; height: 14px; border-radius: 7px;
+               background: linear-gradient(90deg, rgba(251,191,36,0.25), rgba(255,255,255,0.04) 50%, rgba(56,189,248,0.25)); }
+  .pref .bar .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.3); }
+  .pref .bar .naive { position: absolute; top: -3px; width: 2px; height: 20px; background: rgba(255,255,255,0.35); }
+  .pref .bar .now { position: absolute; top: -1px; width: 14px; height: 16px; margin-left: -7px; border-radius: 4px;
+                    background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.6); transition: left 120ms linear; }
+  .pref .val { width: 150px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+  .stat-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border); gap: 8px; }
+  .stat-row span:first-child { color: var(--muted); }
+  .stat-row span:last-child { font-variant-numeric: tabular-nums; color: var(--primary); }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .connected { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+  .disconnected { background: #f87171; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 12px; color: var(--text-2); }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  kbd { font-family: inherit; font-size: 11px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }
+  #smelling { font-size: 13px; color: var(--text-2); margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Fly Learning — Pavlov on the real wiring</h1>
+<div class="sub">
+  <span id="statusDot" class="status-dot disconnected"></span>
+  <span id="statusText">connecting to local simulation...</span>
+  &nbsp;·&nbsp; MaleCNS v1.0 mushroom body (PN · KC · APL · MBON · PAM · PPL1), 100% local
+  &nbsp;·&nbsp; <a href="http://localhost:8765/" style="color:var(--text-2)">the compass →</a>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Kenyon cells — the odour, written as a sparse code</h2>
+    <canvas id="kc"></canvas>
+    <div class="legend">
+      <span><span class="sw" style="background:#7c6f3a"></span>γ lobe</span>
+      <span><span class="sw" style="background:#3a5a7c"></span>α/β lobe</span>
+      <span><span class="sw" style="background:#5f3a7c"></span>α'/β' lobe</span>
+      <span><span class="sw" style="background:#fff"></span>firing now</span>
+    </div>
+    <div id="smelling">Smelling: <b>fresh air</b></div>
+    <div class="hint">All 4,064 Kenyon cells, one square each. An odour is a set of 13 olfactory glomeruli; a Kenyon cell fires only when several of its five-or-so projection-neuron inputs agree, and the APL neuron's feedback keeps it to a few per cent of cells — so each odour lights a different constellation. <b>Those constellations are what the fly learns about.</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Controls — the experiment</h2>
+    <div class="controls">
+      <div class="row">
+        <button id="odA" class="odour" data-od="A">Odour A</button>
+        <button id="odB" class="odour" data-od="B">Odour B</button>
+        <button id="odC" class="odour" data-od="C">Odour C</button>
+        <button id="odNone" class="odour on" data-od="">Fresh air</button>
+      </div>
+      <div class="row">
+        <button id="rewardBtn" class="reward hold">🍬 hold: sugar (reward)</button>
+        <button id="punishBtn" class="punish hold">⚡ hold: shock (punish)</button>
+      </div>
+      <div class="row">
+        <button id="pairReward" class="secondary">Pair this odour + sugar ×3</button>
+        <button id="pairPunish" class="secondary">Pair this odour + shock ×3</button>
+        <button id="forgetBtn" class="secondary">Forget everything</button>
+      </div>
+      <div class="pref" id="pref">
+        <div class="line"><span class="name">What it thinks of</span><span style="flex:1;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"><span>← avoid</span><span>approach →</span></span><span class="val"></span></div>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="stat-row"><span>Neurons (PN / KC / MBON / dopamine)</span><span id="statNeurons">—</span></div>
+      <div class="stat-row"><span>Synaptic connections · plastic ones</span><span id="statEdges">—</span></div>
+      <div class="stat-row"><span>Kenyon cells firing now</span><span id="statKC">—</span></div>
+      <div class="stat-row"><span>Synapses depressed (the memory)</span><span id="statDepressed">0</span></div>
+      <div class="stat-row"><span>Sim step rate</span><span id="statHz">—</span></div>
+    </div>
+    <div class="hint" style="margin-top:12px;">
+      <b>The rule:</b> pick an odour, then hold sugar or shock. Dopamine neurons (PAM for reward, PPL1 for punishment) each cover one compartment of the mushroom body; dopamine arriving while the compartment's Kenyon cells are active <i>depresses</i> those KC→MBON synapses. Reward compartments belong to avoidance-driving MBONs, so odour + sugar = less avoidance = the fly now likes it. Test it: present the odour alone and watch the marker. Then test another odour — it should be untouched.<br>
+      <b>What is real:</b> every cell, transmitter and synapse count; which dopamine class covers which MBON (read from the wiring, not hand-labelled). <b>What is tuned:</b> a handful of gains. <b>What is new:</b> this is the first thing on this box that learns — and it learns at the one synapse evolution made plastic. Keys: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> odours, <kbd>0</kbd> air, hold <kbd>S</kbd> sugar, <kbd>X</kbd> shock.
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <h2>Where the memory lives — depression at each output neuron's Kenyon-cell synapses</h2>
+  <canvas id="trace"></canvas>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--avoid)"></span>avoidance-driving MBONs (reward compartments) — sugar carves here</span>
+    <span><span class="sw" style="background:var(--approach)"></span>approach-driving MBONs (punishment compartments) — shock carves here</span>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const kcCanvas = $('kc'), kctx = kcCanvas.getContext('2d');
+const trCanvas = $('trace'), tctx = trCanvas.getContext('2d');
+const GRID = 64;
+let info = {}, neurons = [];
+let kcIds = [];            // neuron index of each KC, in grid order
+let kcSlot = [];           // neuron index -> grid slot (or -1)
+let kcLobe = [];           // per slot: 'g' | 'ab' | 'apbp'
+let glow = new Float32Array(GRID * GRID);
+let latest = null, trace = null, mbonValence = [];
+let ws = null, frameCount = 0, lastHzTime = performance.now();
+let currentOdour = null;
+
+function fit(canvas, ctx) {
+  const dpr = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { w: r.width, h: r.height };
+}
+window.addEventListener('resize', () => { drawKC(); drawTrace(); });
+
+const LOBE_BG = { g: '#26221a', ab: '#1a2230', apbp: '#241a30' };
+function lobeOf(type) {
+  if (type.startsWith("KCa'b'")) return 'apbp';
+  if (type.startsWith('KCab')) return 'ab';
+  return 'g';
+}
+
+function drawKC() {
+  const { w, h } = fit(kcCanvas, kctx);
+  kctx.fillStyle = '#05070c'; kctx.fillRect(0, 0, w, h);
+  if (!kcIds.length) return;
+  const cw = w / GRID, ch = h / GRID;
+  for (let s = 0; s < kcIds.length; s++) {
+    const x = (s % GRID) * cw, y = Math.floor(s / GRID) * ch;
+    const g = glow[s];
+    if (g > 0.03) {
+      const a = Math.min(1, g);
+      kctx.fillStyle = `rgba(255,${Math.round(230 + 25 * a)},${Math.round(180 + 75 * a)},${0.25 + 0.75 * a})`;
+    } else {
+      kctx.fillStyle = LOBE_BG[kcLobe[s]];
+    }
+    kctx.fillRect(x + 0.5, y + 0.5, Math.max(1, cw - 1), Math.max(1, ch - 1));
+  }
+}
+
+function drawTrace() {
+  const { w, h } = fit(trCanvas, tctx);
+  tctx.fillStyle = '#05070c'; tctx.fillRect(0, 0, w, h);
+  if (!trace || !trace.length) return;
+  const n = trace.length, bw = w / n;
+  tctx.fillStyle = 'rgba(255,255,255,0.08)'; tctx.fillRect(0, h - 1, w, 1);
+  // trace[i] = share of the MBON's Kenyon-cell input lost to depression; 12 % fills the bar
+  const FULL = 0.12;
+  let maxLoss = 0;
+  for (let i = 0; i < n; i++) {
+    const loss = Math.max(0, trace[i]);
+    maxLoss = Math.max(maxLoss, loss);
+    const bh = Math.max(loss > 0.001 ? 2 : 0, Math.min(1, loss / FULL) * (h - 22));
+    tctx.fillStyle = mbonValence[i] === 'avoid' ? '#fbbf24' : '#38bdf8';
+    tctx.globalAlpha = 0.35 + 0.65 * Math.min(1, loss / FULL);
+    tctx.fillRect(i * bw + 1, h - 4 - bh, Math.max(1, bw - 2), bh);
+    tctx.globalAlpha = 1;
+    tctx.fillStyle = mbonValence[i] === 'avoid' ? 'rgba(251,191,36,0.35)' : 'rgba(56,189,248,0.35)';
+    tctx.fillRect(i * bw + 1, h - 4, Math.max(1, bw - 2), 3);
+  }
+  tctx.fillStyle = 'rgba(229,231,235,0.6)'; tctx.font = '11px sans-serif'; tctx.textAlign = 'left'; tctx.textBaseline = 'top';
+  tctx.fillText(maxLoss > 0.001 ? `deepest cut: ${(maxLoss * 100).toFixed(1)} % of that neuron's Kenyon-cell input` : 'nothing learned yet — every synapse at its connectome weight', 8, 6);
+}
+
+function indexNeurons(list) {
+  neurons = list;
+  kcIds = []; kcSlot = new Array(list.length).fill(-1); kcLobe = [];
+  const order = { g: 0, ab: 1, apbp: 2 };
+  const kcs = list.map((m, i) => [m, i]).filter(([m]) => m.role === 'kc')
+    .sort((a, b) => order[lobeOf(a[0].type)] - order[lobeOf(b[0].type)] || a[0].type.localeCompare(b[0].type));
+  kcs.forEach(([m, i], slot) => { kcIds.push(i); kcSlot[i] = slot; kcLobe.push(lobeOf(m.type)); });
+  glow = new Float32Array(GRID * GRID);
+}
+</script>
+
+<script>
+// ---- preference meters ----
+const ODOURS = ['A', 'B', 'C'];
+function buildPref() {
+  const box = $('pref');
+  for (const od of ODOURS) {
+    const line = document.createElement('div'); line.className = 'line';
+    line.innerHTML = `<span class="name">Odour ${od}</span>
+      <div class="bar"><div class="mid"></div><div class="naive" id="naive${od}" style="display:none"></div><div class="now" id="now${od}" style="display:none"></div></div>
+      <span class="val" id="val${od}">not yet smelled</span>`;
+    box.appendChild(line);
+  }
+}
+buildPref();
+function pct(p) { return (50 + 50 * Math.max(-1, Math.min(1, p))) + '%'; }
+function updatePref(d) {
+  for (const od of ODOURS) {
+    const naive = d.naive && d.naive[od], learned = d.learned && d.learned[od];
+    const live = (d.odour === od && d.strengthOk !== false) ? d.pref : learned;
+    const nv = $('naive' + od), nw = $('now' + od), val = $('val' + od);
+    if (naive == null) { val.textContent = 'not yet smelled'; continue; }
+    nv.style.display = 'block'; nv.style.left = pct(naive);
+    nw.style.display = 'block'; nw.style.left = pct(live);
+    const shift = live - naive;
+    val.textContent = `naive ${naive >= 0 ? '+' : ''}${naive.toFixed(2)} → now ${live >= 0 ? '+' : ''}${live.toFixed(2)}` +
+      (Math.abs(shift) > 0.15 ? (shift > 0 ? '  learned: likes it' : '  learned: avoids it') : '');
+  }
+}
+
+// ---- connection ----
+function setStatus(ok, text) {
+  $('statusDot').className = 'status-dot ' + (ok ? 'connected' : 'disconnected');
+  $('statusText').textContent = text;
+}
+function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => { setStatus(true, 'connected — mushroom body running locally'); };
+  ws.onclose = () => { setStatus(false, 'disconnected — retrying...'); ws = null; setTimeout(load, 1500); };
+  ws.onmessage = (evt) => {
+    const data = JSON.parse(evt.data);
+    latest = data;
+    // The server owns the state: another tab (or a script) may have changed the odour.
+    if (!macroRunning && (data.odour || null) !== currentOdour) {
+      currentOdour = data.odour || null;
+      document.querySelectorAll('button.odour').forEach(b => b.classList.toggle('on', (b.dataset.od || null) === currentOdour));
+    }
+    for (let s = 0; s < glow.length; s++) glow[s] *= 0.82;
+    let nkc = 0;
+    for (const id of data.spikes) { const s = kcSlot[id]; if (s >= 0) { glow[s] = 1; nkc++; } }
+    if (data.mbon_trace) { trace = data.mbon_trace; drawTrace(); }
+    $('statKC').textContent = `${Math.round(data.kc_sparsity * 4064)}  (${(data.kc_sparsity * 100).toFixed(1)} %)`;
+    $('statDepressed').textContent = data.n_depressed.toLocaleString() + ' of ' + (info.n_plastic || 0).toLocaleString();
+    $('smelling').innerHTML = 'Smelling: <b>' + (data.odour ? 'odour ' + data.odour : 'fresh air') + '</b>' +
+      (data.reward > 0 ? ' · <span style="color:var(--reward)">sugar</span>' : '') +
+      (data.punish > 0 ? ' · <span style="color:var(--punish)">shock</span>' : '');
+    updatePref(data);
+    frameCount++;
+    const now = performance.now();
+    if (now - lastHzTime > 1000) {
+      $('statHz').textContent = Math.round(frameCount * (info.step_hz / info.frame_hz || 3) * 1000 / (now - lastHzTime)) + ' steps/s';
+      frameCount = 0; lastHzTime = now;
+    }
+    drawKC();
+  };
+}
+function load() {
+  if (ws) return;
+  fetch('/neurons').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(meta => {
+    if (meta.mode !== 'mushroom') {
+      setStatus(false, 'server is not in mushroom mode — start it with: python server/sim_server.py --mode mushroom');
+      setTimeout(load, 3000); return;
+    }
+    info = meta; mbonValence = meta.mbon_valence || [];
+    indexNeurons(meta.neurons);
+    const c = meta.counts || {};
+    $('statNeurons').textContent = `${meta.n}  (${c.pn} / ${c.kc} / ${c.mbon} / ${(c.pam || 0) + (c.ppl1 || 0)})`;
+    $('statEdges').textContent = `${(meta.n_edges || 0).toLocaleString()} · ${(meta.n_plastic || 0).toLocaleString()}`;
+    for (const od of ODOURS) {
+      const b = $('od' + od);
+      if (meta.odours && meta.odours[od]) b.title = 'glomeruli: ' + meta.odours[od].join(', ');
+    }
+    drawKC(); drawTrace();
+    connect();
+  }).catch(() => { setStatus(false, 'waiting for local simulation server — retrying...'); setTimeout(load, 1500); });
+}
+load();
+</script>
+
+<script>
+// ---- controls ----
+function setOdour(od) {
+  currentOdour = od || null;
+  document.querySelectorAll('button.odour').forEach(b => b.classList.toggle('on', (b.dataset.od || null) === currentOdour));
+  send({ odour: currentOdour });
+}
+document.querySelectorAll('button.odour').forEach(b => b.onclick = () => setOdour(b.dataset.od));
+
+let holdReward = false, holdPunish = false, macroRunning = false;
+function pushDrive() { send({ reward: holdReward ? 1 : 0, punish: holdPunish ? 1 : 0 }); }
+function hold(btn, setter) {
+  const on = (e) => { e.preventDefault(); if (macroRunning) return; setter(true); btn.classList.add('on'); pushDrive(); };
+  const off = () => { setter(false); btn.classList.remove('on'); pushDrive(); };
+  btn.addEventListener('pointerdown', on);
+  btn.addEventListener('pointerup', off);
+  btn.addEventListener('pointerleave', off);
+  btn.addEventListener('pointercancel', off);
+}
+hold($('rewardBtn'), v => holdReward = v);
+hold($('punishBtn'), v => holdPunish = v);
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.key === '1') setOdour('A'); if (e.key === '2') setOdour('B'); if (e.key === '3') setOdour('C'); if (e.key === '0') setOdour('');
+  if (e.key === 's' || e.key === 'S') { holdReward = true; $('rewardBtn').classList.add('on'); pushDrive(); }
+  if (e.key === 'x' || e.key === 'X') { holdPunish = true; $('punishBtn').classList.add('on'); pushDrive(); }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.key === 's' || e.key === 'S') { holdReward = false; $('rewardBtn').classList.remove('on'); pushDrive(); }
+  if (e.key === 'x' || e.key === 'X') { holdPunish = false; $('punishBtn').classList.remove('on'); pushDrive(); }
+});
+
+// Pairing macro: 3 x (odour on with sugar/shock for 2.5 s, then 1 s of fresh air), then a 3 s test of the odour alone.
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function pair(kind) {
+  if (macroRunning) return;
+  const od = currentOdour;
+  if (!od) { alert('Pick an odour first — you can only pair what the fly is smelling.'); return; }
+  macroRunning = true;
+  const btns = [$('pairReward'), $('pairPunish'), $('forgetBtn')];
+  btns.forEach(b => b.disabled = true);
+  const driveBtn = kind === 'reward' ? $('rewardBtn') : $('punishBtn');
+  try {
+    for (let i = 0; i < 3; i++) {
+      setOdour(od);
+      send({ [kind]: 1 }); driveBtn.classList.add('on');
+      await sleep(2500);
+      send({ [kind]: 0 }); driveBtn.classList.remove('on');
+      setOdour('');
+      await sleep(1000);
+    }
+    setOdour(od);          // test: the odour alone -- watch the marker
+  } finally {
+    macroRunning = false;
+    btns.forEach(b => b.disabled = false);
+  }
+}
+$('pairReward').onclick = () => pair('reward');
+$('pairPunish').onclick = () => pair('punish');
+$('forgetBtn').onclick = () => { send({ forget: true }); trace = null; drawTrace(); };
+</script>
+</body>
+</html>

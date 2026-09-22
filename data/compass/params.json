@@ -1,0 +1,13 @@
+{
+  "gE": 4.5,
+  "gI": 6.0,
+  "tau_s": 6.0,
+  "threshold_jitter": 0.2,
+  "epg_drive": 0.3,
+  "pen_drive": 0.4,
+  "turn_gain": 1.0,
+  "turn_tau": 15.0,
+  "noise_std": 0.05,
+  "equalize_wedges": true,
+  "_note": "Tuned 2026-09-20 with scripts/04_tune_compass.py --robust: 0 deaths over 6 seeds at full turn, one bump holds for 30 s with no input, turns ~1.2 deg/step both ways. What mattered: (1) turning as PEN gain modulation, not an added current -- an added current fattens/starves the bump and it collapses when released; (2) tau_s=6 + 20% threshold spread -- identical cells with tau_s=4 fire in lock-step, all go refractory together, and the ring dies; (3) gE 4.5 -- at 6+ the within-wedge EPG self-excitation pins the bump so it will not turn; (4) equalising wedge cell counts -- otherwise the bump slides toward the 4-cell wedges."
+}
