@@ -1,8 +1,9 @@
 # Fly Brain — a dead insect's sense of self, running on a PC
 
-*Part 1 of a series that ends with the whole animal switched on. This
-part: two circuits. Later parts: the eye, the body, and finally all
-166,700 neurons at once — see [the series](#the-series) at the bottom.*
+*A series that ends with the whole animal switched on. Part 1 is the
+compass — the self. Part 2 is the learning centre — the lesson. Both
+live in this repository. Later parts: the experiment, the room, the eye,
+and finally all 166,700 neurons at once — see [the series](#the-series).*
 
 One male fruit fly. Killed, fixed in resin, sliced into thousands of
 sections, photographed under an electron microscope, every neuron and
@@ -198,24 +199,27 @@ data/*/params.json               the tuned gains (everything else in data/ is bu
 
 ## The series
 
-This is Part 1. The plan is to keep switching on more of the animal
-until there is nothing left to switch on.
+The plan is to keep switching on more of the animal until there is
+nothing left to switch on. Each part is tagged in this repository
+(`part-1`, `part-2`, …) as it lands.
 
-1. **The self and the lesson** *(this repository)* — the compass that
-   remembers without learning, the mushroom body that learns. 4,885
-   neurons of 166,700.
-2. **The experiment** — the whole brain as an instrument, no dashboard:
+1. **The self** — the compass: 152 neurons that remember without
+   learning. *Tagged `part-1`.*
+2. **The lesson** — the learning centre: 4,733 neurons and the one
+   synapse the animal makes plastic; sugar, shock, and a fly that changes
+   its mind. *Tagged `part-2`.*
+3. **The experiment** — the whole brain as an instrument, no dashboard:
    all 166,700 neurons stepped at once, poke the sugar-taste neurons,
    list which motor neurons answer. Shiu et al. (2024) did this with a
    connectome and predicted real fly behaviour; we'll do it on a desktop.
-3. **The room** — the compass anchored to the world: ring neurons and
+4. **The room** — the compass anchored to the world: ring neurons and
    their inhibitory Hebbian plasticity, so a landmark on a webcam becomes
    north and the mapping self-organises, the way it does in the fly.
-4. **The eye** — webcam → the 13,600 T4/T5 motion detectors → the
+5. **The eye** — webcam → the 13,600 T4/T5 motion detectors → the
    wide-field optic-flow cells → the compass. Direction selectivity does
    not fall out of a plain integrate-and-fire model without tuned time
    constants, so this one is a research project and is labelled as such.
-5. **The whole animal** — every circuit above running together, live,
+6. **The whole animal** — every circuit above running together, live,
    with a body to steer. Taxing the entire connectome.
 
 Side quests on the way: a virtual MIDI port so the needle drives a synth
