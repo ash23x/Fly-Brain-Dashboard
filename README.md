@@ -5,6 +5,12 @@ compass — the self. Part 2 is the learning centre — the lesson. Both
 live in this repository. Later parts: the experiment, the room, the eye,
 and finally all 166,700 neurons at once — see [the series](#the-series).*
 
+<p align="center">
+  <img src="docs/malecns.jpg" width="60%" alt="The complete MaleCNS connectome: the brain and the ventral nerve cord of one male fruit fly, every neuron rendered">
+  <br>
+  <sub>This is the whole of it. The brain, the neck, the nerve cord — every one of 166,700 neurons of one fly, rendered from the reconstruction. Everything below runs on a piece of this. <i>Image: MaleCNS / Janelia Research Campus (HHMI), CC BY 4.0.</i></sub>
+</p>
+
 One male fruit fly. Killed, fixed in resin, sliced into thousands of
 sections, photographed under an electron microscope, every neuron and
 every synapse traced. The animal is gone. Its wiring diagram — the
@@ -85,6 +91,12 @@ On Windows, `start_fly_brain.bat` starts both and opens the compass.
 Python 3.10+, numpy, scipy, pandas, pyarrow, aiohttp, requests. No GPU.
 
 ## The compass — a ring attractor on the real wiring
+
+<p align="center">
+  <img src="docs/flywire_central_complex.jpg" width="60%" alt="The central complex of a fruit fly, rendered from the FlyWire connectome: a rainbow-coloured ring of neurons with a hole at its centre, arched over by the protocerebral bridge">
+  <br>
+  <sub>Where the compass lives: the central complex, rendered by FlyWire from the female brain (ours is the male; the circuit is the same). The rainbow doughnut is the ellipsoid body — the ring the bump sits on. The arch above it is the protocerebral bridge, where the PENs and the Delta7s do their work. <i>Image: FlyWire Consortium, CC BY-NC 4.0 — not covered by this repository's MIT licence.</i></sub>
+</p>
 
 `scripts/03_build_compass.py` pulls the head-direction circuit out of the
 connectome: 50 EPG compass cells, 42 PEN, 18 PEG and 42 Delta7 neurons,
@@ -229,6 +241,10 @@ frozen wiring as a feature extractor for real signals.
 ## Credits and licences
 
 Data: MaleCNS v1.0, CC-BY 4.0 — see `DATA_LICENSE.md`. Code: MIT, see
-`LICENSE`. Background reading: Seelig & Jayaraman 2015; Kim et al. 2017;
+`LICENSE`. Images: the whole-CNS render is MaleCNS / Janelia Research
+Campus (HHMI), CC BY 4.0; the central-complex render is the FlyWire
+Consortium (flywire.ai), CC BY-NC 4.0 — both are reproduced with credit
+and are **not** under this repository's MIT licence. The two dashboard
+screenshots are ours. Background reading: Seelig & Jayaraman 2015; Kim et al. 2017;
 Hulse et al. 2021; Kakaria & de Bivort 2017; Aso et al. 2014; Hige et al.
 2015; Handler et al. 2019; Shiu et al. 2024.
