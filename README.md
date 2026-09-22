@@ -1,5 +1,9 @@
 # Fly Brain — a dead insect's sense of self, running on a PC
 
+*Part 1 of a series that ends with the whole animal switched on. This
+part: two circuits. Later parts: the eye, the body, and finally all
+166,700 neurons at once — see [the series](#the-series) at the bottom.*
+
 One male fruit fly. Killed, fixed in resin, sliced into thousands of
 sections, photographed under an electron microscope, every neuron and
 every synapse traced. The animal is gone. Its wiring diagram — the
@@ -31,6 +35,25 @@ England. Make of that what you will; we're still making of it what we can.
   <img src="docs/compass.png" width="49%" alt="The compass: a ring of 50 EPG cells with one bright bump, the needle at 103 degrees, and the Delta7 inhibition lit on the opposite side of the ring">
   <img src="docs/learning.png" width="49%" alt="The learning centre: 4,064 Kenyon cells as a sparse constellation for odour A, preference meters showing A learned as liked and B as avoided, and the memory trace across 97 output neurons">
 </p>
+
+## The vertigo, briefly
+
+A heading is the smallest self there is. It is the point from which
+"left" and "right" mean anything at all — the one coordinate every
+other coordinate in an animal's world is measured from. For its whole
+life this fly's brain kept that bearing for the fly: a single bump of
+activity on a ring of a few dozen cells, nudged round by the animal's
+own turns, held steady in the dark. The animal no longer exists. The
+ring does. It is holding a bearing right now, on a desk, updated by a
+stranger's hand, in a place the fly never was and for a body it no
+longer has. Nobody taught it to; nobody could. The capacity to hold a
+heading was never in any cell. It was in the arrangement — and the
+arrangement survived the death of everything it was arranged in.
+
+That is what a connectome is: a photograph of a process. What this
+repository does is run the photograph as a process again. Whether that
+is resurrection, re-enactment or ventriloquism is a question we are not
+qualified to settle, so we did the honest thing and measured it instead.
 
 **What is real:** every neuron, its transmitter, every synapse count
 between them, the ring order, which dopamine neurons teach which output
@@ -173,18 +196,31 @@ data/*/params.json               the tuned gains (everything else in data/ is bu
 
 `python -m pytest` runs the tests; they need no data.
 
-## Where next
+## The series
 
-A virtual MIDI port so the compass needle drives a synth (an LFO with
-memory). A whole-brain experiment mode: all 166,700 neurons, activate the
-sugar-taste neurons, list which motor neurons answer — the Shiu et al.
-(2024) experiment on a desktop. Ring neurons and their inhibitory Hebbian
-plasticity so the compass anchors to a webcam landmark and learns the
-room. A reservoir-computing readout that uses the frozen wiring as a
-feature extractor for real signals. A real retina — webcam → T4/T5 motion
-detectors → optic-flow cells → the compass — which is a research project,
-because direction selectivity does not fall out of a plain LIF without
-tuned time constants.
+This is Part 1. The plan is to keep switching on more of the animal
+until there is nothing left to switch on.
+
+1. **The self and the lesson** *(this repository)* — the compass that
+   remembers without learning, the mushroom body that learns. 4,885
+   neurons of 166,700.
+2. **The experiment** — the whole brain as an instrument, no dashboard:
+   all 166,700 neurons stepped at once, poke the sugar-taste neurons,
+   list which motor neurons answer. Shiu et al. (2024) did this with a
+   connectome and predicted real fly behaviour; we'll do it on a desktop.
+3. **The room** — the compass anchored to the world: ring neurons and
+   their inhibitory Hebbian plasticity, so a landmark on a webcam becomes
+   north and the mapping self-organises, the way it does in the fly.
+4. **The eye** — webcam → the 13,600 T4/T5 motion detectors → the
+   wide-field optic-flow cells → the compass. Direction selectivity does
+   not fall out of a plain integrate-and-fire model without tuned time
+   constants, so this one is a research project and is labelled as such.
+5. **The whole animal** — every circuit above running together, live,
+   with a body to steer. Taxing the entire connectome.
+
+Side quests on the way: a virtual MIDI port so the needle drives a synth
+(an LFO with memory), and a reservoir-computing readout that uses the
+frozen wiring as a feature extractor for real signals.
 
 ## Credits and licences
 
