@@ -83,12 +83,39 @@ python scripts/01_download_data.py                 # ~560 MB, once, from the off
 python scripts/03_build_compass.py                 # cuts the compass circuit out, ~2 s
 python scripts/05_build_mushroom_body.py           # cuts the learning centre out, ~5 s
 
+python scripts/06_fetch_skeletons.py compass       # optional: the cells' real 3D shapes, ~9 MB
+python scripts/07_build_skeletons.py compass       #   (and the same for `mushroom`, ~150 MB)
+
 python server/sim_server.py --mode compass                 # http://localhost:8765/
 python server/sim_server.py --mode mushroom --port 8766    # http://localhost:8766/
 ```
 
 On Windows, `start_fly_brain.bat` starts both and opens the compass.
 Python 3.10+, numpy, scipy, pandas, pyarrow, aiohttp, requests. No GPU.
+
+## The brain in 3D
+
+<p align="center">
+  <img src="docs/brain3d_shock.png" width="80%" alt="The learning centre in 3D: 4,733 reconstructed neurons of the mushroom body as glowing skeletons, with the PPL1 punishment dopamine neurons blazing across the vertical lobes during a shock">
+  <br>
+  <sub>All 4,733 cells of the learning centre, their real shapes, mid-shock: the punishment dopamine neurons blaze across the lobes while odour B's Kenyon cells fire beneath them.</sub>
+</p>
+
+Run the two optional skeleton steps and each page grows a third panel:
+the actual reconstructed shapes of every neuron in that simulation —
+skeletons from the same Janelia release as the wiring, fetched by body
+ID from the same public bucket, nothing else — drawn in raw WebGL and
+**lit by the live simulation**. A cell flares when it fires. On the
+compass you can watch the bump walk round the real ellipsoid body when
+you turn; on the learning centre, present an odour and a sparse scatter
+of Kenyon cells lights up along the real lobes, then hold sugar and the
+reward dopamine neurons blaze across them. Drag to orbit, scroll to
+zoom; it drifts on its own when left alone. No rendering library: one
+shader, one draw call, two one-pixel-high textures (each cell's colour,
+each cell's glow), and the glow texture rewritten every frame from the
+spike feed. Skeletons are simplified on the way in (branch points and
+tips kept, wiggles under 1.5 µm dropped): the compass is 136,000 line
+segments, the learning centre a few million.
 
 ## The compass — a ring attractor on the real wiring
 
@@ -194,6 +221,9 @@ scripts/01_download_data.py      the three release files, once, resumable
 scripts/03_build_compass.py      compass circuit + ring angles  -> data/compass/
 scripts/04_tune_compass.py       gain search; --robust runs six seeds at full turn
 scripts/05_build_mushroom_body.py learning circuit + MBON valence -> data/mushroom/
+scripts/06_fetch_skeletons.py    per-neuron SWC skeletons for a circuit -> data/skeletons/ (cached, shared)
+scripts/07_build_skeletons.py    simplify + pack skeletons for the GPU -> data/<circuit>/skeleton_*.bin
+dashboard/brain3d.js             the WebGL renderer both pages use for the 3D panel
 scripts/probe_*.py               diagnostics: circuit census, connection kernels vs angle,
                                  population traces, the Pavlov protocol, live WebSocket tests
 scripts/screenshot.py            headless-Chrome screenshot of a live page (waits for the WebSocket)

@@ -54,10 +54,15 @@ def read_params(circuit_dir: pathlib.Path) -> dict:
         return {k: v for k, v in json.load(f).items() if not str(k).startswith("_")}
 
 
+SKELETON_FILES = {"skeletons.json": "application/json", "skeleton_pos.bin": "application/octet-stream",
+                  "skeleton_idx.bin": "application/octet-stream"}
+
+
 class Server:
     def __init__(self, mode: str, hz: float, substeps: int):
         spec = MODES[mode]
         self.mode = mode
+        self.circuit_dir = spec["dir"]
         self.page = PAGES / spec["page"]
         self.hz = hz
         self.substeps = substeps
@@ -68,6 +73,16 @@ class Server:
     # ---- HTTP ----------------------------------------------------------------
     async def index(self, request: web.Request) -> web.FileResponse:
         return web.FileResponse(self.page, headers={"Cache-Control": "no-store"})
+
+    async def skeleton(self, request: web.Request) -> web.StreamResponse:
+        """The packed 3D skeletons, if scripts/06 and 07 have been run for this circuit."""
+        name = request.match_info["name"]
+        if name not in SKELETON_FILES:
+            raise web.HTTPNotFound()
+        path = self.circuit_dir / name
+        if not path.exists():
+            raise web.HTTPNotFound(text="no skeletons built: run scripts/06_fetch_skeletons.py and 07_build_skeletons.py")
+        return web.FileResponse(path, headers={"Content-Type": SKELETON_FILES[name], "Cache-Control": "no-store"})
 
     async def neurons(self, request: web.Request) -> web.Response:
         sim = self.sim
@@ -169,6 +184,7 @@ def make_app(mode: str, hz: float = 30.0, substeps: int = 3) -> web.Application:
     app.router.add_get("/", server.index)
     app.router.add_get("/neurons", server.neurons)
     app.router.add_get("/ws", server.ws)
+    app.router.add_get("/skeletons/{name}", server.skeleton)
     app.router.add_static("/static/", PAGES, show_index=False)
 
     async def start(app: web.Application) -> None:

@@ -9,8 +9,8 @@ import aiohttp
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 PORT = 9333
 
-async def main(url: str, out: str, wait: float) -> None:
-    proc = subprocess.Popen([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+async def main(url: str, out: str, wait: float, selector: str | None = None) -> None:
+    proc = subprocess.Popen([CHROME, "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--hide-scrollbars",
                              "--window-size=1280,1180", f"--remote-debugging-port={PORT}",
                              "--user-data-dir=" + str(pathlib.Path.home() / ".fly-shot-profile"), "about:blank"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -39,6 +39,9 @@ async def main(url: str, out: str, wait: float) -> None:
                 await cmd("Network.setCacheDisabled", cacheDisabled=True)
                 await cmd("Page.navigate", url=url)
                 await asyncio.sleep(wait)
+                if selector:
+                    await cmd("Runtime.evaluate", expression=f"document.querySelector({selector!r}).scrollIntoView({{block:'start'}})")
+                    await asyncio.sleep(1.5)
                 shot = await cmd("Page.captureScreenshot", format="png")
                 pathlib.Path(out).write_bytes(base64.b64decode(shot["data"]))
                 print(f"wrote {out} ({pathlib.Path(out).stat().st_size:,} bytes)")
@@ -46,4 +49,5 @@ async def main(url: str, out: str, wait: float) -> None:
         proc.kill()
 
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1], sys.argv[2], float(sys.argv[3]) if len(sys.argv) > 3 else 8.0))
+    asyncio.run(main(sys.argv[1], sys.argv[2], float(sys.argv[3]) if len(sys.argv) > 3 else 8.0,
+                     sys.argv[4] if len(sys.argv) > 4 else None))
