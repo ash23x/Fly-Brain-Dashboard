@@ -16,15 +16,16 @@ const Brain3D = (() => {
     void main() { gl_Position = u_mvp * vec4(a_pos, 1.0); v_u = (a_idx + 0.5) / u_n; }`;
   const FS = `
     precision mediump float;
-    varying float v_u; uniform sampler2D u_col; uniform sampler2D u_glow; uniform float u_base;
+    varying float v_u; uniform sampler2D u_col; uniform sampler2D u_glow; uniform float u_base; uniform float u_bright;
     void main() {
       vec4 bc = texture2D(u_col, vec2(v_u, 0.5));
       vec3 base = bc.rgb; float rest = bc.a;      // alpha channel = how visible the cell is when quiet
       float g = texture2D(u_glow, vec2(v_u, 0.5)).r;
       // "over" compositing with premultiplied colour: dense bundles converge on the
       // cell's colour instead of burning out to white; a firing cell goes bright.
-      vec3 c = base * (u_base * rest + 0.7 * g) + vec3(1.0, 0.98, 0.9) * g * 0.6;
-      float a = 0.15 * rest + 0.65 * g;
+      // u_bright is the user's dimmer: it scales everything, the white flare most of all.
+      vec3 c = (base * (u_base * rest + 0.7 * g) + vec3(1.0, 0.98, 0.9) * g * 0.6 * u_bright) * u_bright;
+      float a = (0.15 * rest + 0.65 * g) * (0.4 + 0.6 * u_bright);
       gl_FragColor = vec4(c * a, a);
     }`;
 
@@ -70,12 +71,12 @@ const Brain3D = (() => {
       pos: gl.getAttribLocation(prog, 'a_pos'), idx: gl.getAttribLocation(prog, 'a_idx'),
       mvp: gl.getUniformLocation(prog, 'u_mvp'), n: gl.getUniformLocation(prog, 'u_n'),
       col: gl.getUniformLocation(prog, 'u_col'), glow: gl.getUniformLocation(prog, 'u_glow'),
-      base: gl.getUniformLocation(prog, 'u_base'),
+      base: gl.getUniformLocation(prog, 'u_base'), bright: gl.getUniformLocation(prog, 'u_bright'),
     };
     const state = {
       gl, prog, loc, n: 0, count: 0, glow: null, glowTex: null, colTex: null, bounds: null,
       theta: 0.6, phi: 0.35, dist: 1.25, target: [0, 0, 0], dragging: false, lastX: 0, lastY: 0,
-      lastInteract: 0, spikesPending: new Set(), ready: false, base: 0.4,
+      lastInteract: 0, spikesPending: new Set(), ready: false, base: 0.4, bright: 0.5,
     };
 
     // ---- orbit controls: drag to turn, wheel to zoom, idle = slow auto-rotate ----
@@ -133,15 +134,29 @@ const Brain3D = (() => {
 
     function spike(ids) { for (const i of ids) state.spikesPending.add(i); }
 
+    // Optional dimmer: pass a <input type="range" min="0" max="100">. Remembered per browser.
+    function bindBrightness(slider) {
+      let saved = null;
+      try { saved = localStorage.getItem('brain3d.bright'); } catch (e) {}
+      if (saved !== null && !isNaN(parseFloat(saved))) state.bright = parseFloat(saved);
+      slider.value = Math.round(state.bright * 100);
+      slider.addEventListener('input', () => {
+        state.bright = slider.value / 100;
+        try { localStorage.setItem('brain3d.bright', String(state.bright)); } catch (e) {}
+      });
+    }
+
     let lastT = performance.now();
     function frame(now) {
       if (!state.ready) return;
       const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
       if (!state.dragging && now - state.lastInteract > 2500) state.theta += 0.12 * dt;
-      // glow: decay, then light the cells that fired since the last frame
+      // glow: decay, then add a flicker for each cell that fired since the last frame.
+      // A single spike is a flicker; only a cell firing steadily (the bump, a dopamine
+      // neuron under sugar) climbs to full brightness -- rate coding, made visible.
       const g = state.glow;
-      for (let i = 0; i < g.length; i++) g[i] = g[i] * 0.86;
-      for (const i of state.spikesPending) if (i < g.length) g[i] = 255;
+      for (let i = 0; i < g.length; i++) g[i] = g[i] * 0.84;
+      for (const i of state.spikesPending) if (i < g.length) g[i] = Math.min(255, g[i] + 120);
       state.spikesPending.clear();
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, state.glowTex);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, state.n, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, g);
@@ -157,11 +172,12 @@ const Brain3D = (() => {
       const mvp = mul(perspective(0.9, w / h, r * 0.05, r * 10), lookAt(eye, state.target, [0, 1, 0]));
       gl.uniformMatrix4fv(loc.mvp, false, mvp);
       gl.uniform1f(loc.base, state.base);
+      gl.uniform1f(loc.bright, state.bright);
       gl.drawArrays(gl.LINES, 0, state.count);
       requestAnimationFrame(frame);
     }
 
-    return { load, spike, state };
+    return { load, spike, bindBrightness, state };
   }
   return { attach };
 })();

@@ -127,6 +127,7 @@
     <span><span class="sw" style="background:var(--peg)"></span>PEG</span>
     <span><span class="sw" style="background:var(--d7)"></span>Delta7</span>
     <span id="brainStatus" style="color:var(--muted)">loading skeletons…</span>
+    <span style="margin-left:auto; display:inline-flex; align-items:center; gap:8px;"><label for="brainBright" style="font-size:12px;">brightness</label><input type="range" id="brainBright" min="10" max="100" value="50" style="width:120px;"></span>
   </div>
   <div class="hint">These are the reconstructed skeletons of the actual neurons in the simulation, from the same release as the wiring — every arbor is where it was in the animal. A cell flares when it fires. The doughnut is the ellipsoid body, the ring the bump lives on; the arch above it is the protocerebral bridge. <b>Drag</b> to turn it, <b>scroll</b> to zoom; it drifts on its own when left alone. Turn the compass and watch the bump walk round the real ring.</div>
 </div>
@@ -323,6 +324,7 @@ function indexNeurons(list) {
   history = []; trail = [];
   if (!brain) {
     brain = Brain3D.attach($('brain'), (m) => hexToRgb(ROLE_COLOR[roleKey(m)] || '#9aa0a8'));
+    if (brain) brain.bindBrightness($('brainBright'));
     if (brain) brain.load(list).then(meta => {
       $('brainStatus').textContent = `${meta.n_segments.toLocaleString()} line segments from ${meta.n_neurons} skeletons`;
     }).catch(() => { $('brainStatus').textContent = 'no skeletons yet — run scripts/06_fetch_skeletons.py compass, then 07_build_skeletons.py compass'; });
