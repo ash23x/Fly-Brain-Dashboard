@@ -2,7 +2,7 @@
     python tests/check_pages.py http://localhost:8090 [chromium|firefox]
 Chromium runs headless with SwiftShader; Firefox needs a display (xvfb-run) for WebGL.
 """
-import json, sys, time
+import json, os, sys, time
 from playwright.sync_api import sync_playwright
 
 base = sys.argv[1].rstrip('/') if len(sys.argv) > 1 else 'http://localhost:8090'
@@ -23,13 +23,14 @@ def wait_for(page, expr, timeout=60):
 
 with sync_playwright() as p:
     b = launch(p)
-    page = b.new_page(viewport={"width": 1280, "height": 900})
+    ctx = b.new_context(viewport={"width": 1280, "height": 900}, ignore_https_errors=bool(os.environ.get("IGNORE_TLS")))
+    page = ctx.new_page()
     logs = []
     page.on("console", lambda m: logs.append(f"[{m.type}] {m.text}") if m.type in ("error", "warning") else None)
     page.on("pageerror", lambda e: logs.append(f"[pageerror] {e}"))
 
     # ---- compass ----
-    page.goto(base + '/compass.html')
+    page.goto(base + '/compass')
     ok = wait_for(page, "() => document.getElementById('statusText').textContent.startsWith('running in this tab')", 60)
     print('compass status:', page.evaluate("() => document.getElementById('statusText').textContent"), '| ok' if ok else '| FAILED')
     wait_for(page, "() => typeof brain !== 'undefined' && brain && brain.state.ready", 90)
@@ -43,7 +44,7 @@ with sync_playwright() as p:
     page.screenshot(path='check_compass.png', full_page=True)
 
     # ---- learning centre ----
-    page.goto(base + '/learning.html')
+    page.goto(base + '/learning')
     ok = wait_for(page, "() => document.getElementById('statusText').textContent.startsWith('running in this tab')", 90)
     print('learning status:', page.evaluate("() => document.getElementById('statusText').textContent"), '| ok' if ok else '| FAILED')
     wait_for(page, "() => typeof brain !== 'undefined' && brain && brain.state.ready", 120)

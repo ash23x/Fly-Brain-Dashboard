@@ -17,8 +17,12 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Vercel CLI link (the project is linked by name; see vercel.json)
+.vercel/
+
 # Editor and OS noise
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+check_*.png

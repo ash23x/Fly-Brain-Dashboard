@@ -3,7 +3,7 @@
 *A series that ends with the whole animal switched on. Part 1 is the
 compass — the self. Part 2 is the learning centre — the lesson. Both
 live in this repository, and both **run in your browser** at
-[fly-brain.vercel.app](https://fly-brain.vercel.app) — the same pages,
+[fly-brain-ivory.vercel.app](https://fly-brain-ivory.vercel.app) — the same pages,
 the same wiring, the fly moved into a Web Worker. Later parts: the
 experiment, the room, the eye, and finally all 166,700 neurons at once —
 see [the series](#the-series).*
