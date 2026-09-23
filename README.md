@@ -2,8 +2,11 @@
 
 *A series that ends with the whole animal switched on. Part 1 is the
 compass — the self. Part 2 is the learning centre — the lesson. Both
-live in this repository. Later parts: the experiment, the room, the eye,
-and finally all 166,700 neurons at once — see [the series](#the-series).*
+live in this repository, and both **run in your browser** at
+[fly-brain.vercel.app](https://fly-brain.vercel.app) — the same pages,
+the same wiring, the fly moved into a Web Worker. Later parts: the
+experiment, the room, the eye, and finally all 166,700 neurons at once —
+see [the series](#the-series).*
 
 <p align="center">
   <img src="docs/malecns.jpg" width="60%" alt="The complete MaleCNS connectome: the brain and the ventral nerve cord of one male fruit fly, every neuron rendered">
@@ -92,6 +95,21 @@ python server/sim_server.py --mode mushroom --port 8766    # http://localhost:87
 
 On Windows, `start_fly_brain.bat` starts both and opens the compass.
 Python 3.10+, numpy, scipy, pandas, pyarrow, aiohttp, requests. No GPU.
+
+### …or without Python at all
+
+`web/` is also a complete static site. Served by anything — Vercel, GitHub
+Pages, `python -m http.server` — the same two pages run the same circuits
+in a Web Worker in the visitor's tab: `web/sim/compass_sim.js` and
+`web/sim/mushroom_sim.js` are step-for-step ports of the Python
+simulators, fed from `web/data/<circuit>/` (the normalised wiring as the
+Python code builds it, exported by `scripts/08_export_web.py`, plus the
+skeletons with int16 positions). `tests/verify_web_sims.js` and
+`tests/verify_web_sims.py` run both implementations through the same
+protocols so the numbers can be compared: same holds, same turn rates,
+same Pavlov curve. A page decides at load time: if `/neurons` answers,
+it is the local server and frames come over the WebSocket; if not, it
+starts the worker. Nothing a visitor does leaves their browser.
 
 ## The brain in 3D
 
@@ -228,7 +246,12 @@ scripts/04_tune_compass.py       gain search; --robust runs six seeds at full tu
 scripts/05_build_mushroom_body.py learning circuit + MBON valence -> data/mushroom/
 scripts/06_fetch_skeletons.py    per-neuron SWC skeletons for a circuit -> data/skeletons/ (cached, shared)
 scripts/07_build_skeletons.py    simplify + pack skeletons for the GPU -> data/<circuit>/skeleton_*.bin
-dashboard/brain3d.js             the WebGL renderer both pages use for the 3D panel
+scripts/08_export_web.py         export a circuit for the browser-only build -> web/data/<circuit>/
+web/brain3d.js                   the WebGL renderer both pages use for the 3D panel
+web/link.js                      page <-> fly: WebSocket to the local server, or a Web Worker
+web/sim/                         the simulators in JavaScript (compass_sim.js, mushroom_sim.js, worker.js)
+web/index.html                   the front page of the published site
+web/data/                        exported wiring + skeletons the published pages run on
 scripts/probe_*.py               diagnostics: circuit census, connection kernels vs angle,
                                  population traces, the Pavlov protocol, live WebSocket tests
 scripts/screenshot.py            headless-Chrome screenshot of a live page (waits for the WebSocket)
@@ -236,13 +259,15 @@ scripts/send.py                  send one JSON command to a live server
 server/compass_sim.py            the compass simulator
 server/mushroom_sim.py           the learning-centre simulator
 server/sim_server.py             aiohttp server: page + /neurons + /ws, one mode per process
-dashboard/compass.html           the ring, the needle, the raster
-dashboard/mushroom.html          the Kenyon-cell grid, the odour bench, the memory trace
+web/compass.html                 the ring, the needle, the raster
+web/learning.html                the Kenyon-cell grid, the odour bench, the memory trace
 tests/                           pytest on tiny synthetic circuits (no download needed)
 data/*/params.json               the tuned gains (everything else in data/ is built or fetched)
 ```
 
-`python -m pytest` runs the tests; they need no data.
+`python -m pytest` runs the tests; they need no data. `node
+tests/verify_web_sims.js` runs the browser simulators through the hold /
+turn and Pavlov protocols (needs `web/data/`, which is in the repository).
 
 ## The series
 

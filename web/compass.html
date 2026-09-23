@@ -76,7 +76,7 @@
   <span id="statusDot" class="status-dot disconnected"></span>
   <span id="statusText">connecting to local simulation...</span>
   &nbsp;·&nbsp; MaleCNS v1.0 central complex (EPG · PEN · PEG · Delta7), 100% local
-  &nbsp;·&nbsp; <a href="http://localhost:8766/" style="color:var(--text-2)">the learning centre →</a>
+  &nbsp;·&nbsp; <a id="otherLink" href="learning.html" style="color:var(--text-2)">the learning centre →</a>
 </div>
 
 <div class="grid">
@@ -157,7 +157,8 @@
   </div>
 </div>
 
-<script src="/static/brain3d.js"></script>
+<script src="brain3d.js"></script>
+<script src="link.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const ring = $('ring'), rctx = ring.getContext('2d');
@@ -175,7 +176,7 @@ let wedges = [];                // [{angle, members: [positions in epg_rate], d7
 let rowOrder = [], rowOfNeuron = [], rowColor = [];
 let latest = null, history = [], trail = [], cueFlash = null;
 let frameRate = [];             // client-side EMA of "spiked this frame", all neurons (for Delta7 band)
-let ws = null, frameCount = 0, lastHzTime = performance.now();
+let link = null, frameCount = 0, lastHzTime = performance.now();
 
 // ---- sizing ----
 function fit(canvas, ctx) {
@@ -263,7 +264,7 @@ ring.addEventListener('click', (e) => {
   const x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
   const angle = (Math.atan2(y, x) * 180 / Math.PI + 90 + 360) % 360;
   cueFlash = { angle, t: performance.now() };
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cue: angle }));
+  if (link) link.send({ cue: angle });
 });
 </script>
 
@@ -300,7 +301,7 @@ function drawRaster() {
 }
 function roleKey(m) { return m.role === 'pen' ? (m.pb_side === 'L' ? 'pen_l' : 'pen_r') : m.role; }
 
-function indexNeurons(list) {
+function indexNeurons(list, assets) {
   neurons = list;
   epgPos = new Array(list.length).fill(-1);
   let k = 0;
@@ -339,9 +340,9 @@ function indexNeurons(list) {
     brain = Brain3D.attach($('brain'), (m) => hexToRgb(ROLE_COLOR[roleKey(m)] || '#9aa0a8'));
     if (brain) brain.bindBrightness($('brainBright'));
     if (brain) brain.onStatus = (t) => { $('brainStatus').textContent = t; };
-    if (brain) brain.load(list).then(meta => {
+    if (brain) brain.load(list, assets).then(meta => {
       $('brainStatus').textContent = `${meta.n_segments.toLocaleString()} line segments from ${meta.n_neurons} skeletons`;
-    }).catch(() => { $('brainStatus').textContent = 'no skeletons yet — run scripts/06_fetch_skeletons.py compass, then 07_build_skeletons.py compass'; });
+    }).catch(() => { $('brainStatus').textContent = 'no skeletons here — run scripts/06_fetch_skeletons.py compass, then 07_build_skeletons.py compass'; });
   }
 }
 </script>
@@ -352,13 +353,7 @@ function setStatus(ok, text) {
   $('statusDot').className = 'status-dot ' + (ok ? 'connected' : 'disconnected');
   $('statusText').textContent = text;
 }
-function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen = () => { setStatus(true, 'connected — compass circuit running locally'); sendTurn(); };
-  ws.onclose = () => { setStatus(false, 'disconnected — retrying...'); ws = null; setTimeout(load, 1500); };
-  ws.onmessage = (evt) => {
-    const data = JSON.parse(evt.data);
+function onFrame(data) {
     latest = data;
     history.push(data.spikes);
     if (history.length > HISTORY_LEN) history.shift();
@@ -380,24 +375,19 @@ function connect() {
       frameCount = 0; lastHzTime = now;
     }
     drawRing(); drawRaster();
-  };
 }
-function load() {
-  if (ws) return;
-  fetch('/neurons').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(meta => {
-    if (meta.mode !== 'compass') {
-      setStatus(false, 'server is not in compass mode — start it with: python server/sim_server.py --mode compass');
-      setTimeout(load, 3000); return;
-    }
+FlyLink.open('compass', {
+  onStatus: setStatus,
+  onMeta: (meta, l) => {
     info = meta;
-    indexNeurons(meta.neurons);
+    indexNeurons(meta.neurons, l.assets);
     $('statNeurons').textContent = `${meta.n}  (${meta.n_epg} / ${meta.n_pen} / ${meta.n_peg} / ${meta.n_delta7})`;
     $('statEdges').textContent = (meta.n_edges || 0).toLocaleString();
+    $('otherLink').href = l.other.learning;
     drawRing(); drawRaster();
-    connect();
-  }).catch(() => { setStatus(false, 'waiting for local simulation server — retrying...'); setTimeout(load, 1500); });
-}
-load();
+  },
+  onFrame,
+}).then(l => { link = l; sendTurn(); });
 
 // ---- turn commands ----
 // The 18-wedge ring pins like a lattice: a PEN asymmetry below ~40% of full
@@ -413,7 +403,7 @@ function effectiveTurn() {
 function sendTurn() {
   const t = effectiveTurn();
   $('turnValue').textContent = (t > 0 ? '+' : '') + t.toFixed(2);
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ turn: t }));
+  if (link) link.send({ turn: t });
 }
 function hold(btn, setter) {
   const on = (e) => { e.preventDefault(); setter(true); btn.classList.add('on'); sendTurn(); };
@@ -444,11 +434,11 @@ slider.addEventListener('keyup', release);
 $('cueBtn').onclick = () => {
   const angle = Math.random() * 360;
   cueFlash = { angle, t: performance.now() };
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cue: angle }));
+  if (link) link.send({ cue: angle });
 };
 $('killBtn').onclick = () => {
   history = []; trail = [];
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ reset: true }));
+  if (link) link.send({ reset: true });
 };
 </script>
 

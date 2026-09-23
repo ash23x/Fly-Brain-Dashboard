@@ -81,7 +81,7 @@
   <span id="statusDot" class="status-dot disconnected"></span>
   <span id="statusText">connecting to local simulation...</span>
   &nbsp;·&nbsp; MaleCNS v1.0 mushroom body (PN · KC · APL · MBON · PAM · PPL1), 100% local
-  &nbsp;·&nbsp; <a href="http://localhost:8765/" style="color:var(--text-2)">the compass →</a>
+  &nbsp;·&nbsp; <a id="otherLink" href="compass.html" style="color:var(--text-2)">the compass →</a>
 </div>
 
 <div class="grid">
@@ -161,7 +161,8 @@
   </div>
 </div>
 
-<script src="/static/brain3d.js"></script>
+<script src="brain3d.js"></script>
+<script src="link.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const kcCanvas = $('kc'), kctx = kcCanvas.getContext('2d');
@@ -187,7 +188,7 @@ let kcSlot = [];           // neuron index -> grid slot (or -1)
 let kcLobe = [];           // per slot: 'g' | 'ab' | 'apbp'
 let glow = new Float32Array(GRID * GRID);
 let latest = null, trace = null, mbonValence = [];
-let ws = null, frameCount = 0, lastHzTime = performance.now();
+let link = null, frameCount = 0, lastHzTime = performance.now();
 let currentOdour = null;
 
 function fit(canvas, ctx) {
@@ -249,7 +250,7 @@ function drawTrace() {
   tctx.fillText(maxLoss > 0.001 ? `deepest cut: ${(maxLoss * 100).toFixed(1)} % of that neuron's Kenyon-cell input` : 'nothing learned yet — every synapse at its connectome weight', 8, 6);
 }
 
-function indexNeurons(list) {
+function indexNeurons(list, assets) {
   neurons = list;
   kcIds = []; kcSlot = new Array(list.length).fill(-1); kcLobe = [];
   const order = { g: 0, ab: 1, apbp: 2 };
@@ -261,9 +262,9 @@ function indexNeurons(list) {
     brain = Brain3D.attach($('brain'), brainColour);
     if (brain) brain.bindBrightness($('brainBright'));
     if (brain) brain.onStatus = (t) => { $('brainStatus').textContent = t; };
-    if (brain) brain.load(list).then(meta => {
+    if (brain) brain.load(list, assets).then(meta => {
       $('brainStatus').textContent = `${meta.n_segments.toLocaleString()} line segments from ${meta.n_neurons - meta.missing_skeletons} skeletons`;
-    }).catch(() => { $('brainStatus').textContent = 'no skeletons yet — run scripts/06_fetch_skeletons.py mushroom, then 07_build_skeletons.py mushroom'; });
+    }).catch(() => { $('brainStatus').textContent = 'no skeletons here — run scripts/06_fetch_skeletons.py mushroom, then 07_build_skeletons.py mushroom'; });
   }
 }
 </script>
@@ -302,14 +303,8 @@ function setStatus(ok, text) {
   $('statusDot').className = 'status-dot ' + (ok ? 'connected' : 'disconnected');
   $('statusText').textContent = text;
 }
-function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
-function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen = () => { setStatus(true, 'connected — mushroom body running locally'); };
-  ws.onclose = () => { setStatus(false, 'disconnected — retrying...'); ws = null; setTimeout(load, 1500); };
-  ws.onmessage = (evt) => {
-    const data = JSON.parse(evt.data);
+function send(obj) { if (link) link.send(obj); }
+function onFrame(data) {
     latest = data;
     // The server owns the state: another tab (or a script) may have changed the odour.
     if (!macroRunning && (data.odour || null) !== currentOdour) {
@@ -334,17 +329,12 @@ function connect() {
       frameCount = 0; lastHzTime = now;
     }
     drawKC();
-  };
 }
-function load() {
-  if (ws) return;
-  fetch('/neurons').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(meta => {
-    if (meta.mode !== 'mushroom') {
-      setStatus(false, 'server is not in mushroom mode — start it with: python server/sim_server.py --mode mushroom');
-      setTimeout(load, 3000); return;
-    }
+FlyLink.open('mushroom', {
+  onStatus: setStatus,
+  onMeta: (meta, l) => {
     info = meta; mbonValence = meta.mbon_valence || [];
-    indexNeurons(meta.neurons);
+    indexNeurons(meta.neurons, l.assets);
     const c = meta.counts || {};
     $('statNeurons').textContent = `${meta.n}  (${c.pn} / ${c.kc} / ${c.mbon} / ${(c.pam || 0) + (c.ppl1 || 0)})`;
     $('statEdges').textContent = `${(meta.n_edges || 0).toLocaleString()} · ${(meta.n_plastic || 0).toLocaleString()}`;
@@ -352,11 +342,11 @@ function load() {
       const b = $('od' + od);
       if (meta.odours && meta.odours[od]) b.title = 'glomeruli: ' + meta.odours[od].join(', ');
     }
+    $('otherLink').href = l.other.compass;
     drawKC(); drawTrace();
-    connect();
-  }).catch(() => { setStatus(false, 'waiting for local simulation server — retrying...'); setTimeout(load, 1500); });
-}
-load();
+  },
+  onFrame,
+}).then(l => { link = l; });
 </script>
 
 <script>

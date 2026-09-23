@@ -5,9 +5,13 @@
 // from the spikes the server sends.
 //
 //   const brain = Brain3D.attach(canvasElement, colourForNeuron /* (meta, i) -> [r,g,b(,rest)] 0..1 */);
-//   brain.load(neuronsList);          // fetches /skeletons/* from the same server
-//   brain.spike(listOfNeuronIndices); // call on every WebSocket frame
-//   brain.onStatus = (text) => ...;   // optional: context-loss / recovery messages
+//   brain.load(neuronsList, base);    // fetches skeletons.json + skeleton_pos.bin from `base`
+//                                     // ('/skeletons/' on the local server, 'data/<circuit>/' on the web)
+//   brain.spike(listOfNeuronIndices); // call on every frame
+//   brain.onStatus = (text) => ...;   // optional: download progress, context-loss / recovery messages
+//
+// Positions are float32 microns (scripts/07) or int16 with a scale (scripts/08, half
+// the bytes); the per-vertex neuron index is rebuilt from the per-neuron ranges.
 //
 // Survives a lost WebGL context (Firefox on Windows drops them readily, e.g. when the
 // canvas backing store is reallocated during a zoom): the CPU-side arrays are kept and
@@ -16,9 +20,9 @@
 const Brain3D = (() => {
   const VS = `
     attribute vec3 a_pos; attribute float a_idx;
-    uniform mat4 u_mvp; uniform float u_n;
+    uniform mat4 u_mvp; uniform float u_n; uniform float u_scale;
     varying float v_u;
-    void main() { gl_Position = u_mvp * vec4(a_pos, 1.0); v_u = (a_idx + 0.5) / u_n; }`;
+    void main() { gl_Position = u_mvp * vec4(a_pos * u_scale, 1.0); v_u = (a_idx + 0.5) / u_n; }`;
   const FS = `
     precision mediump float;
     varying float v_u; uniform sampler2D u_col; uniform sampler2D u_glow; uniform float u_base; uniform float u_bright;
@@ -71,7 +75,7 @@ const Brain3D = (() => {
 
     const state = {
       gl, prog: null, loc: null, n: 0, count: 0, glow: null, glowTex: null, colTex: null, bounds: null, radius: 1,
-      pos: null, idx: null, col: null,                     // CPU copies, so a lost context can be rebuilt
+      pos: null, posType: null, posScale: 1, idx: null, col: null,   // CPU copies, so a lost context can be rebuilt
       theta: 0.6, phi: 0.35, dist: 1.25, target: [0, 0, 0], dragging: false, lastX: 0, lastY: 0,
       lastInteract: 0, spikesPending: new Set(), ready: false, loaded: false, base: 0.4, bright: 0.5,
       lost: 0, restored: 0, frameErrors: 0, running: false,
@@ -94,12 +98,14 @@ const Brain3D = (() => {
         mvp: gl.getUniformLocation(prog, 'u_mvp'), n: gl.getUniformLocation(prog, 'u_n'),
         col: gl.getUniformLocation(prog, 'u_col'), glow: gl.getUniformLocation(prog, 'u_glow'),
         base: gl.getUniformLocation(prog, 'u_base'), bright: gl.getUniformLocation(prog, 'u_bright'),
+        scale: gl.getUniformLocation(prog, 'u_scale'),
       };
     }
     function uploadData() {
       const loc = state.loc;
       const posB = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, posB); gl.bufferData(gl.ARRAY_BUFFER, state.pos, gl.STATIC_DRAW);
-      gl.enableVertexAttribArray(loc.pos); gl.vertexAttribPointer(loc.pos, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(loc.pos); gl.vertexAttribPointer(loc.pos, 3, state.posType, false, 0, 0);
+      gl.uniform1f(loc.scale, state.posScale);
       const idxB = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, idxB); gl.bufferData(gl.ARRAY_BUFFER, state.idx, gl.STATIC_DRAW);
       gl.enableVertexAttribArray(loc.idx); gl.vertexAttribPointer(loc.idx, 1, gl.FLOAT, false, 0, 0);
       state.colTex = makeTex(gl, state.n, state.col, gl.RGBA);
@@ -159,16 +165,32 @@ const Brain3D = (() => {
       state.lastInteract = performance.now();
     }, { passive: false });
 
-    async function load(neurons) {
-      const [meta, posBuf, idxBuf] = await Promise.all([
-        fetch('/skeletons/skeletons.json').then(r => { if (!r.ok) throw new Error('no skeletons'); return r.json(); }),
-        fetch('/skeletons/skeleton_pos.bin').then(r => r.arrayBuffer()),
-        fetch('/skeletons/skeleton_idx.bin').then(r => r.arrayBuffer()),
-      ]);
-      state.pos = new Float32Array(posBuf);
-      const idx16 = new Uint16Array(idxBuf);
-      state.idx = new Float32Array(idx16.length);
-      for (let i = 0; i < idx16.length; i++) state.idx[i] = idx16[i];
+    // fetch with a progress line, because the learning centre's skeletons are ~12 MB
+    async function fetchBytes(url, label) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      const total = +r.headers.get('Content-Length') || 0;
+      if (!r.body || !r.body.getReader) return r.arrayBuffer();
+      const reader = r.body.getReader(); const chunks = []; let got = 0, lastShown = -1;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value); got += value.length;
+        const shown = total ? Math.round(100 * got / total) : Math.round(got / 1e6);
+        if (shown !== lastShown) { lastShown = shown; status(total ? `${label}… ${shown} %` : `${label}… ${shown} MB`); }
+      }
+      const out = new Uint8Array(got); let o = 0;
+      for (const c of chunks) { out.set(c, o); o += c.length; }
+      return out.buffer;
+    }
+
+    async function load(neurons, base = '/skeletons/') {
+      const meta = await fetch(base + 'skeletons.json').then(r => { if (!r.ok) throw new Error('no skeletons'); return r.json(); });
+      const posBuf = await fetchBytes(base + 'skeleton_pos.bin', `loading ${meta.n_segments.toLocaleString()} line segments`);
+      if (meta.pos_format === 'int16') { state.pos = new Int16Array(posBuf); state.posType = gl.SHORT; state.posScale = meta.pos_scale; }
+      else { state.pos = new Float32Array(posBuf); state.posType = gl.FLOAT; state.posScale = 1; }
+      state.idx = new Float32Array(meta.n_vertices);
+      meta.ranges.forEach(([start, count], i) => { state.idx.fill(i, start, start + count); });
       state.n = meta.n_neurons; state.count = meta.n_vertices; state.bounds = meta.bounds;
       const ext = Math.max(meta.bounds.max[0] - meta.bounds.min[0], meta.bounds.max[1] - meta.bounds.min[1], meta.bounds.max[2] - meta.bounds.min[2]);
       state.radius = ext * 1.1;

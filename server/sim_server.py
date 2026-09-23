@@ -1,5 +1,5 @@
 """
-Runs one of the fly circuits and serves its dashboard on localhost.
+Runs one of the fly circuits and serves its page on localhost.
 
     python server/sim_server.py --mode compass                  # http://localhost:8765/
     python server/sim_server.py --mode mushroom --port 8766     # http://localhost:8766/
@@ -9,10 +9,14 @@ also disables the webcam button on non-localhost pages -- browsers only
 allow camera access on localhost or HTTPS), --hz frames per second sent
 to the browser (30), --substeps simulation steps per frame (3).
 
-Routes:  /            the mode's page (dashboard/compass.html or mushroom.html)
+Routes:  /            the mode's page (web/compass.html or web/learning.html)
          /neurons     circuit metadata as JSON
          /ws          WebSocket: one JSON message per frame from the server;
                       the page sends small JSON commands back
+         /skeletons/  the packed 3D skeletons, if built
+         /<file>      anything else in web/ (the renderer, link.js, the browser-only sim)
+The same pages, served without this server (web/ on any static host), run the
+circuit in a Web Worker instead -- see web/link.js and web/sim/.
 Commands the page may send:
     compass:   {"turn": -1..1}  {"cue": degrees}  {"reset": true}
     mushroom:  {"odour": "A"|"B"|"C"|null}  {"reward": 0..1}  {"punish": 0..1}
@@ -39,10 +43,10 @@ from mushroom_sim import MushroomSim  # noqa: E402
 MODES = {
     "compass": {"dir": ROOT / "data" / "compass", "page": "compass.html",
                 "build": "scripts/03_build_compass.py", "cls": CompassSim},
-    "mushroom": {"dir": ROOT / "data" / "mushroom", "page": "mushroom.html",
+    "mushroom": {"dir": ROOT / "data" / "mushroom", "page": "learning.html",
                  "build": "scripts/05_build_mushroom_body.py", "cls": MushroomSim},
 }
-PAGES = ROOT / "dashboard"
+PAGES = ROOT / "web"
 
 
 def read_params(circuit_dir: pathlib.Path) -> dict:
@@ -185,7 +189,7 @@ def make_app(mode: str, hz: float = 30.0, substeps: int = 3) -> web.Application:
     app.router.add_get("/neurons", server.neurons)
     app.router.add_get("/ws", server.ws)
     app.router.add_get("/skeletons/{name}", server.skeleton)
-    app.router.add_static("/static/", PAGES, show_index=False)
+    app.router.add_static("/", PAGES, show_index=False)      # brain3d.js, link.js, sim/ -- after the routes above
 
     async def start(app: web.Application) -> None:
         app["loop_task"] = asyncio.create_task(server.run(app))

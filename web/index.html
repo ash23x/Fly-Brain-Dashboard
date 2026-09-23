@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Fly Brain — a dead insect's sense of self, running in your browser</title>
+<meta name="description" content="Two circuits of one fruit fly's brain, switched back on from the complete MaleCNS connectome: the compass that knows which way it is facing, and the learning centre that can be taught. Every neuron and synapse is real; it runs entirely in your browser tab.">
+<meta property="og:title" content="Fly Brain — a dead insect's sense of self, running in your browser">
+<meta property="og:description" content="152 neurons that hold a heading with nothing stored anywhere; 4,733 that learn at the one synapse evolution made plastic. Real wiring from the MaleCNS connectome, simulated live in your tab.">
+<meta property="og:image" content="img/compass_card.jpg">
+<style>
+  :root { --bg: #0b0e14; --panel: #141925; --primary: #7dd3fc; --secondary: #a78bfa; --text: #e5e7eb; --text-2: #b4b9c3;
+          --muted: #6b7280; --border: rgba(255,255,255,0.06); --gold: #fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(circle at top, #131826 0%, var(--bg) 60%); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-height: 100vh; line-height: 1.55; }
+  main { max-width: 1040px; margin: 0 auto; padding: 40px 24px 60px; }
+  h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.15; margin: 0 0 8px; background: linear-gradient(90deg, var(--primary), var(--secondary));
+       -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
+  .lede { font-size: 18px; color: var(--text-2); max-width: 760px; margin: 0 0 28px; }
+  .lede b { color: var(--text); }
+  figure { margin: 0 0 32px; }
+  figure img { width: 100%; border-radius: 14px; border: 1px solid var(--border); display: block; }
+  figcaption { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 8px 0 36px; }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.35); transition: transform 120ms ease, border-color 120ms ease; display: flex; flex-direction: column; }
+  .card:hover { transform: translateY(-2px); border-color: rgba(125,211,252,0.35); }
+  .card img { width: 100%; aspect-ratio: 960 / 585; object-fit: cover; display: block; }
+  .card .body { padding: 16px 18px 18px; }
+  .card .part { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .card h2 { font-size: 20px; margin: 4px 0 6px; color: var(--text); }
+  .card p { margin: 0 0 10px; color: var(--text-2); font-size: 14px; }
+  .card .cta { color: var(--primary); font-weight: 600; font-size: 14px; }
+  .card .num { color: var(--gold); font-variant-numeric: tabular-nums; }
+  p { max-width: 760px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 32px 0 8px; }
+  .honest { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; font-size: 14px; color: var(--text-2); }
+  .honest b { color: var(--text); }
+  footer { margin-top: 40px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 16px; }
+  footer a, .lede a, p a { color: var(--text-2); }
+  kbd { font-family: inherit; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fly Brain — a dead insect's sense of self, running in your browser</h1>
+  <p class="lede">One male fruit fly. Killed, fixed in resin, sliced into thousands of sections, every neuron and every synapse traced.
+    The animal is gone; its complete wiring diagram — <b>166,700 neurons</b>, the MaleCNS connectome released by HHMI Janelia
+    and collaborators in September 2026 — is a public file. This site switches two of its circuits back on. <b>They run in your tab</b>,
+    every cell and connection real, and nothing you do here leaves your browser.</p>
+
+  <div class="cards">
+    <a class="card" href="compass">
+      <img src="img/compass_card.jpg" alt="The compass: a ring of EPG cells with one bright bump and a needle, beside the real 3D skeletons of the same 152 neurons">
+      <div class="body">
+        <div class="part">Part 1 · the self</div>
+        <h2>The compass</h2>
+        <p><span class="num">152 neurons</span> that tell a fly which way it is facing. A bump of activity sits on a ring of cells; the bump <i>is</i> the heading.
+          Steer it, let go, and it holds — nothing stored anywhere, no weight ever changes. The geometry of the wiring holds it. Memory without learning.</p>
+        <div class="cta">Turn the fly →</div>
+      </div>
+    </a>
+    <a class="card" href="learning">
+      <img src="img/learning_card.jpg" alt="The learning centre: 4,064 Kenyon cells as a sparse constellation for an odour, beside the 3D skeletons of the mushroom body">
+      <div class="body">
+        <div class="part">Part 2 · the lesson</div>
+        <h2>The learning centre</h2>
+        <p><span class="num">4,733 neurons</span> of the mushroom body, with the one synapse type the animal makes plastic. Show it an odour and give it sugar
+          and it comes to like that odour; shock it on another and it learns to avoid that one — specific, reversible, forgettable. Pavlov, on the original hardware.</p>
+        <div class="cta">Teach the fly →</div>
+      </div>
+    </a>
+  </div>
+
+  <figure>
+    <img src="img/malecns.jpg" alt="The complete MaleCNS connectome: the brain and the ventral nerve cord of one male fruit fly, every neuron rendered">
+    <figcaption>The whole of it: brain, neck and nerve cord of one fly, every neuron rendered from the reconstruction. The two pages above run on pieces of this.
+      Image: MaleCNS / Janelia Research Campus (HHMI), CC BY 4.0.</figcaption>
+  </figure>
+
+  <h3>The vertigo, briefly</h3>
+  <p>A heading is the smallest self there is — the point from which "left" and "right" mean anything at all. For its whole life this fly's brain kept
+    that bearing as a single bump of activity on a ring of a few dozen cells, nudged round by the animal's own turns, held steady in the dark.
+    The animal no longer exists. The ring does. It is holding a bearing right now, in your tab, updated by your hand, for a body it no longer has.
+    The capacity to hold a heading was never in any cell; it was in the arrangement — and the arrangement survived the death of everything it was arranged in.</p>
+  <p>A connectome is a photograph of a process. These pages run the photograph as a process again. Whether that is resurrection, re-enactment or
+    ventriloquism is a question we are not qualified to settle, so we did the honest thing and measured it instead.</p>
+
+  <div class="honest">
+    <b>What is real:</b> every neuron, its transmitter, every synapse count between them, the ring order (derived from the wiring, then checked against the
+    anatomists' labels: 18 for 18), which dopamine neurons teach which output neurons. <b>What is ours:</b> cartoon neuron dynamics (leaky integrate-and-fire),
+    a handful of gains, and the modelling choices written up in the <a href="https://github.com/ash23x/Fly-Brain-Dashboard">repository</a>.
+    The 3D panels draw the reconstructed skeletons of the actual neurons in each simulation, lit by their own spikes.
+    Best on a laptop or desktop with a mouse; the learning centre downloads about 15 MB of neurons.
+  </div>
+
+  <h3>The series</h3>
+  <p>Part 1 is the compass, Part 2 the learning centre. Later parts: the experiment (the brain as an instrument), the room (visual landmarks anchoring
+    the compass), the eye (the motion detectors), and finally all 166,700 neurons at once. The code, the data pipeline and the write-up are on
+    <a href="https://github.com/ash23x/Fly-Brain-Dashboard">GitHub</a>; the simulators there run the same circuits in Python, and the pages here are the same
+    pages, with the fly moved into a Web Worker.</p>
+
+  <footer>
+    Connectome: MaleCNS v1.0 (HHMI Janelia FlyEM, University of Cambridge, MRC LMB, Google Research), CC BY 4.0. Skeletons from the same release.
+    Code MIT, © 2026 Gregory Ashley (ash23x). Built with Claude.
+  </footer>
+</main>
+</body>
+</html>

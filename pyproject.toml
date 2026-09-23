@@ -1,6 +1,6 @@
 [project]
 name = "fly-brain"
-version = "0.2.0"
+version = "0.3.0"
 description = "Two circuits of the MaleCNS v1.0 fruit-fly connectome as live spiking simulations: a compass that remembers without learning, and a learning centre that learns."
 requires-python = ">=3.10"
 dependencies = [
