@@ -34,7 +34,7 @@ function apply(cmd) {
   const num = (k, lo, hi) => { const v = parseFloat(cmd[k]); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null; };
   if (mode === 'compass') {
     if ('turn' in cmd) { const v = num('turn', -1, 1); if (v !== null) sim.setTurn(v); }
-    if ('cue' in cmd) { const v = num('cue', -1e9, 1e9); if (v !== null) sim.cue(((v % 360) + 360) % 360, 2.0, 30, 60); }
+    if ('cue' in cmd) { const v = num('cue', -1e9, 1e9); if (v !== null) sim.cue(((v % 360) + 360) % 360, 2.0, 30, 60, 3.0, 0.5); }   // a landmark, kept in view
   } else {
     if ('odour' in cmd && (cmd.odour === null || cmd.odour === '' || cmd.odour in sim.odours)) sim.setOdour(cmd.odour || null);
     if ('reward' in cmd) { const v = num('reward', 0, 1); if (v !== null) sim.setReward(v); }

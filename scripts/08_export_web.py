@@ -85,6 +85,7 @@ def export_compass(out: pathlib.Path) -> None:
         "pen_left": sim.pen_left.astype(np.int32), "pen_right": sim.pen_right.astype(np.int32),
         "d7_idx": sim.d7_idx.astype(np.int32), "peg_idx": sim.peg_idx.astype(np.int32),
         "epg_angle": sim.epg_angle.astype(np.float32),                                 # radians, EPG order
+        "ext0": sim.ext0.astype(np.float32),                                           # tonic drive per cell
     }
     with open(out / "meta.json", "w") as f:
         json.dump(meta, f, separators=(",", ":"))

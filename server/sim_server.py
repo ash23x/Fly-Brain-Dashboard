@@ -136,7 +136,7 @@ class Server:
             if "turn" in cmd and (v := num("turn", -1.0, 1.0)) is not None:
                 sim.set_turn(v)
             if "cue" in cmd and (v := num("cue", -1e9, 1e9)) is not None:
-                sim.cue(v % 360.0, strength=2.0, steps=60)
+                sim.cue(v % 360.0, strength=2.0, steps=60, suppress=3.0, hold=0.5)   # a landmark: the ring neurons' inhibitory mask, kept in view
         else:
             if "odour" in cmd and (cmd["odour"] is None or cmd["odour"] in sim.odours):
                 sim.set_odour(cmd["odour"])

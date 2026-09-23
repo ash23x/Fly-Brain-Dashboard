@@ -43,8 +43,17 @@ def compass(seed):
     left = run(300, -1)
     hold3 = run(600, 0)
     allf = hold1 + right + hold2 + left + hold3
+    lm = []
+    rng = np.random.default_rng(seed)
+    for _ in range(3):
+        target = (sim.heading + 60 + rng.uniform(0, 240)) % 360
+        sim.cue(target, strength=2.0, steps=60, suppress=3.0, hold=0.5)
+        for i in range(240):
+            f = sim.step()
+        lm.append(abs(circ(f["heading"], target)))
+        run(150, 1); run(200, 0)
     ms = (time.perf_counter() - t0) * 1000 / len(allf) / 1.0
-    return {"seed": seed, "cue_error": f"{circ(hold1[120]['heading'], 90):.1f}",
+    return {"seed": seed, "cue_error": f"{circ(hold1[120]['heading'], 90):.1f}", "landmark_err": "/".join(f"{x:.0f}" for x in lm),
             "hold_drift": f"{path_length(hold1[300:]):.1f}", "hold_strength": f"{np.mean([f['strength'] for f in hold1[300:]]):.2f}",
             "turn_right_deg": f"{path_length(right):.0f}", "turn_left_deg": f"{path_length(left):.0f}",
             "silent_steps": sum(1 for f in allf if f["strength"] == 0),

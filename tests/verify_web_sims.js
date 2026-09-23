@@ -37,8 +37,18 @@ function compass(seed) {
   const dRight = pathLen(right);
   const dLeft = pathLen(left);
   const deaths = [...hold1, ...right, ...hold2, ...left, ...hold3].filter(f => f.strength === 0).length;
+  // landmarks: drop three at random angles >= 60 deg away; error while anchored, then turn away and come back
+  const lm = [];
+  for (let k = 0; k < 3; k++) {
+    const target = (sim.heading + 60 + Math.random() * 240) % 360;
+    sim.cue(target, 2.0, 30, 60, 3.0, 0.5);
+    let e = 0; for (let i = 0; i < 240; i++) { const f = sim.step(); if (i === 239) e = Math.abs(circ(f.heading, target)); }
+    lm.push(e);
+    run(150, 1); run(200, 0);
+  }
   const ms = (Date.now() - t0) / 3000;
-  return { seed, cue_error: circ(hold1[120].heading, 90).toFixed(1), hold_drift: drift.toFixed(1), hold_strength: mean(s1).toFixed(2),
+  return { seed, cue_error: circ(hold1[120].heading, 90).toFixed(1), landmark_err: lm.map(x => x.toFixed(0)).join('/'),
+           hold_drift: drift.toFixed(1), hold_strength: mean(s1).toFixed(2),
            turn_right_deg: dRight.toFixed(0), turn_left_deg: dLeft.toFixed(0), silent_steps: deaths,
            mean_epg_rate: rateSteps(hold1.slice(300)).toFixed(3), reignitions: sim.reignitions, ms_per_step: ms.toFixed(3) };
 }

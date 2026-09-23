@@ -32,38 +32,50 @@
       this.epg_angle = A.epg_angle;
       this.epg_cos = new Float64Array(this.epg_idx.length); this.epg_sin = new Float64Array(this.epg_idx.length);
       for (let k = 0; k < this.epg_idx.length; k++) { this.epg_cos[k] = Math.cos(this.epg_angle[k]); this.epg_sin[k] = Math.sin(this.epg_angle[k]); }
-      this.ext0 = new Float64Array(this.n);                   // the tonic drives, fixed
-      for (const i of this.epg_idx) this.ext0[i] += this.epg_drive;
-      for (const i of this.pen_idx) this.ext0[i] += this.pen_drive;
+      this.ext0 = new Float64Array(this.n);                   // the tonic drives (with any per-wedge calibration), fixed
+      if (A.ext0) this.ext0.set(A.ext0);
+      else { for (const i of this.epg_idx) this.ext0[i] += this.epg_drive; for (const i of this.pen_idx) this.ext0[i] += this.pen_drive; }
 
       const n = this.n;
       this.v = new Float64Array(n); this.s = new Float64Array(n); this.s_eff = new Float64Array(n);
       this.refractory = new Int32Array(n); this.spikes = new Uint8Array(n); this.rate = new Float64Array(n);
       this.E_in = new Float64Array(n); this.I_in = new Float64Array(n);
       this._cue = new Float64Array(n); this._cue_steps = 0;
+      this._hold = null; this.landmark = null;                // a landmark kept in view, and its angle
       this.turn = 0; this.turn_cmd = 0;
       this._silent_steps = 0; this._reignite_random = true; this.reignitions = 0;
       this.heading = 0; this.strength = 0; this.step_count = 0;
       this.epg_rate = new Float64Array(this.epg_idx.length);
     }
 
-    setTurn(omega) { this.turn_cmd = Math.max(-1, Math.min(1, +omega || 0)); }
+    // Turning takes the landmark out of view: the anchor lets go.
+    setTurn(omega) {
+      this.turn_cmd = Math.max(-1, Math.min(1, +omega || 0));
+      if (this.turn_cmd !== 0) { this._hold = null; this.landmark = null; }
+    }
 
-    // A landmark: current into the EPGs near angle_deg for a while (the ring neurons' job in the fly).
-    cue(angleDeg, strength = 0.8, widthDeg = 30, steps = 60) {
+    // A landmark: current into the EPGs near angle_deg for `steps`, and with `suppress` > 0
+    // current pulled OUT of the EPGs everywhere else -- the ring neurons' inhibitory mask,
+    // which is how the fly's visual system actually reaches its compass. Excitation alone
+    // loses to an established bump most of the time. With `hold` > 0 a gentler mask stays
+    // on afterwards, anchoring the bump until the fly turns, resets, or sees another landmark.
+    cue(angleDeg, strength = 0.8, widthDeg = 30, steps = 60, suppress = 0, hold = 0) {
       const a0 = angleDeg * Math.PI / 180, w = widthDeg * Math.PI / 180;
       this._cue.fill(0);
       for (let k = 0; k < this.epg_idx.length; k++) {
         let d = this.epg_angle[k] - a0;
         d = Math.atan2(Math.sin(d), Math.cos(d));
-        this._cue[this.epg_idx[k]] = strength * Math.exp(-0.5 * (d / w) * (d / w));
+        const g = Math.exp(-0.5 * (d / w) * (d / w));
+        this._cue[this.epg_idx[k]] = strength * g - suppress * (1 - g);
       }
       this._cue_steps = steps | 0;
+      if (hold > 0) { this._hold = Float64Array.from(this._cue, x => x * hold); this.landmark = ((angleDeg % 360) + 360) % 360; }
+      else { this._hold = null; this.landmark = null; }
     }
 
     reset() {
       this.v.fill(0); this.s.fill(0); this.refractory.fill(0); this.spikes.fill(0); this.rate.fill(0);
-      this._cue_steps = 0; this._silent_steps = 0; this._reignite_random = true;
+      this._cue_steps = 0; this._hold = null; this.landmark = null; this._silent_steps = 0; this._reignite_random = true;
       this.turn = 0; this.turn_cmd = 0; this.step_count = 0;
     }
 
@@ -84,12 +96,12 @@
         if (se !== 0) for (let i = 0; i < n; i++) E_in[i] += se * W_E[row + i];
         if (sj !== 0) for (let i = 0; i < n; i++) I_in[i] += sj * W_I[row + i];
       }
-      const cueOn = this._cue_steps > 0;
+      const cueOn = this._cue_steps > 0, hold = cueOn ? null : this._hold;
       const gE = this.gE, gI = this.gI, ns = this.noise_std, tau_m = this.tau_m, thr = this.threshold;
       const decay = 1 - 1 / this.tau_s, alpha = this.rate_alpha;
       for (let i = 0; i < n; i++) {
         let I = gE * E_in[i] - gI * I_in[i] + this.ext0[i];
-        if (cueOn) I += this._cue[i];
+        if (cueOn) I += this._cue[i]; else if (hold) I += hold[i];
         if (ns > 0) I += ns * this.rng.normal();
         let vi = v[i] + (-v[i] + I) / tau_m;
         const refr = refractory[i] > 0;
@@ -127,7 +139,8 @@
       const fired = [];
       for (let i = 0; i < n; i++) if (spikes[i]) fired.push(i);
       return { spikes: fired, heading: Math.round(this.heading * 100) / 100, strength: Math.round(this.strength * 1000) / 1000,
-               turn: Math.round(this.turn * 1000) / 1000, epg_rate: Array.from(r, x => Math.round(x * 1000) / 1000) };
+               turn: Math.round(this.turn * 1000) / 1000, landmark: this.landmark === null ? null : Math.round(this.landmark * 10) / 10,
+               epg_rate: Array.from(r, x => Math.round(x * 1000) / 1000) };
     }
   }
   root.CompassSim = CompassSim;

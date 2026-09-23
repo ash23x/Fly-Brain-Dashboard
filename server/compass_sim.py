@@ -81,6 +81,21 @@ class CompassSim:
         self.epg_angle = np.radians(ang[self.epg_idx])
         self.epg_unit = np.exp(1j * self.epg_angle)
 
+        # ---- tonic drive, with the per-wedge calibration --------------------
+        # This fly's ring has favourite headings (its wiring is not uniform round the
+        # ring); scripts/09_calibrate_compass.py finds one small bias current per wedge
+        # that flattens them, so a heading holds wherever a turn leaves it.
+        self.ext0 = np.zeros(self.n)
+        self.ext0[self.epg_idx] += self.epg_drive
+        self.ext0[self.pen_idx] += self.pen_drive
+        bias = params.get("epg_bias")
+        wedge_angles = sorted({round(float(ang[i])) for i in self.epg_idx})
+        self.epg_bias = np.zeros(len(wedge_angles))
+        if bias is not None and len(bias) == len(wedge_angles):
+            self.epg_bias = np.asarray(bias, dtype=np.float64)
+            for i in self.epg_idx:
+                self.ext0[i] += self.epg_bias[wedge_angles.index(round(float(ang[i])))]
+
         # ---- equalise wedge "mass" -----------------------------------------
         # This one fly has 2, 3 or 4 EPGs per wedge (and 2-3 PENs per PB
         # glomerulus). Left as is, a 4-cell wedge shouts louder than a 2-cell
@@ -112,6 +127,35 @@ class CompassSim:
         self.W_raw = W_raw
         self.nnz = int((W_raw > 0).sum())
 
+        # ---- equalise the mix of input pathways --------------------------------
+        # Per-cell normalisation fixes each cell's total input, not its recipe: one
+        # EPG might take 60 % of its excitation from the PENs and 25 % from its own
+        # wedge, its neighbour 45 % and 40 %. Those recipes differ cell to cell far
+        # more than the circuit's logic can mean them to, and the bump ends up with
+        # favourite headings -- it slides toward the cells whose recipe suits it.
+        # So every cell of a type gets its type's average recipe (share of input
+        # from EPGs, left-bridge PENs, right-bridge PENs, PEGs); WHICH cells feed it
+        # is still the connectome's. Also balances the two hemispheres' push on
+        # every EPG, which turning relies on. Reduces the drift of a released bump
+        # by a third and removes the occasional silent step; a real fly's compass
+        # still drifts in the dark, and so does this one.
+        self.equalize_pathways = bool(params.get("equalize_pathways", True))
+        if self.equalize_pathways:
+            roles = np.array([m["role"] for m in self.neurons])           # (the loop above reused the name `role`)
+            group = np.array([m["role"] + ("_" + m.get("pb_side", "") if m["role"] == "pen" else "") for m in self.neurons])
+            groups = sorted(set(group))
+            for r in sorted(set(roles)):
+                cols = [i for i in np.where(roles == r)[0] if self.W_E[:, i].sum() > 0]
+                if not cols:
+                    continue
+                share = np.array([[self.W_E[group == g, i].sum() for g in groups] for i in cols])
+                mean_share = share.mean(axis=0)
+                for k, i in enumerate(cols):
+                    for gi, g in enumerate(groups):
+                        if share[k, gi] > 0 and mean_share[gi] > 0:
+                            self.W_E[group == g, i] *= mean_share[gi] / share[k, gi]
+            self.W_E /= np.maximum(self.W_E.sum(axis=0, keepdims=True), 1e-9)
+
         # ---- state -----------------------------------------------------------
         self.v = np.zeros(self.n)
         self.s = np.zeros(self.n)
@@ -122,6 +166,8 @@ class CompassSim:
         self.turn_cmd = 0.0        # requested command
         self._cue = np.zeros(self.n)
         self._cue_steps = 0
+        self._hold: np.ndarray | None = None   # the sustained landmark mask, if one is in view
+        self.landmark: float | None = None     # its angle, for the page
         self._silent_steps = 0
         self._reignite_random = True
         self.reignitions = 0
@@ -131,17 +177,38 @@ class CompassSim:
 
     # ---- inputs ------------------------------------------------------------
     def set_turn(self, omega: float) -> None:
-        """omega in [-1, 1]: angular-velocity command (sign = direction)."""
+        """omega in [-1, 1]: angular-velocity command (sign = direction).
+        Turning takes the landmark out of view: the anchor lets go."""
         self.turn_cmd = float(max(-1.0, min(1.0, omega)))
+        if self.turn_cmd != 0.0:
+            self._hold = None
+            self.landmark = None
 
-    def cue(self, angle_deg: float, strength: float = 0.8, width_deg: float = 30.0, steps: int = 60) -> None:
-        """A landmark: push current into the EPGs near `angle_deg` for a while.
-        (In the fly this comes from the ring neurons of the visual system.)"""
+    def cue(self, angle_deg: float, strength: float = 0.8, width_deg: float = 30.0, steps: int = 60,
+            suppress: float = 0.0, hold: float = 0.0) -> None:
+        """A landmark: push current into the EPGs near `angle_deg` for `steps`, and
+        with `suppress` > 0 pull current OUT of the EPGs everywhere else.
+
+        In the fly the visual system reaches the compass through the ring neurons,
+        which are inhibitory: a landmark is an inhibitory mask over the whole ring
+        with a hole where the landmark is (Fisher 2019, Kim 2019). Excitation alone
+        loses to an established bump most of the time -- its recurrent support and
+        the Delta7 inhibition it casts on the target keep it in place -- while the
+        mask starves the old bump and the new one forms in the hole.
+
+        With `hold` > 0 the landmark stays in view after the strong phase, as a
+        gentler mask (that fraction of the cue), and keeps the bump anchored until
+        the fly turns, is reset, or sees another landmark. Without it the bump is
+        free the moment the cue ends and slides off toward this ring's favourite
+        headings within a second or two: this fly's wiring is not perfectly
+        uniform, and a bump dropped between two of its basins does not stay."""
         d = np.angle(np.exp(1j * (self.epg_angle - np.radians(angle_deg))))
-        prof = strength * np.exp(-0.5 * (d / np.radians(width_deg)) ** 2)
+        g = np.exp(-0.5 * (d / np.radians(width_deg)) ** 2)
         self._cue[:] = 0.0
-        self._cue[self.epg_idx] = prof
+        self._cue[self.epg_idx] = strength * g - suppress * (1.0 - g)
         self._cue_steps = int(steps)
+        self._hold = self._cue * hold if hold > 0 else None
+        self.landmark = float(angle_deg % 360.0) if hold > 0 else None
 
     def reset(self) -> None:
         self.v[:] = 0.0
@@ -150,6 +217,8 @@ class CompassSim:
         self.spikes[:] = False
         self.rate[:] = 0.0
         self._cue_steps = 0
+        self._hold = None
+        self.landmark = None
         self._silent_steps = 0
         self._reignite_random = True
         self.turn = 0.0
@@ -169,12 +238,12 @@ class CompassSim:
         s_eff[self.pen_right] *= 1.0 - self.turn_gain * self.turn
         E_in = s_eff @ self.W_E
         I_in = self.s @ self.W_I
-        ext = np.zeros(self.n)
-        ext[self.epg_idx] += self.epg_drive
-        ext[self.pen_idx] += self.pen_drive
+        ext = self.ext0.copy()
         if self._cue_steps > 0:
             ext += self._cue
             self._cue_steps -= 1
+        elif self._hold is not None:
+            ext += self._hold
         I = self.gE * E_in - self.gI * I_in + ext
         if self.noise_std > 0:
             I = I + self.rng.normal(0.0, self.noise_std, self.n)
@@ -219,5 +288,6 @@ class CompassSim:
             "heading": round(self.heading, 2),
             "strength": round(self.strength, 3),
             "turn": round(self.turn, 3),
+            "landmark": None if self.landmark is None else round(self.landmark, 1),
             "epg_rate": np.round(r, 3).tolist(),
         }

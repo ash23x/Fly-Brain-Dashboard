@@ -166,7 +166,12 @@ first shown to emerge from a spiking model of the bridge by Kakaria & de
 Bivort (2017).
 
 What you can do on the page: click the ring to drop a landmark (the
-visual system's job in the animal) and the bump jumps there; hold a turn
+visual system's job in the animal) and the bump jumps there and stays
+anchored while the landmark is in view — a landmark is an inhibitory
+mask over the whole ring with a hole where the landmark is, which is
+how the ring neurons actually reach the compass (Fisher 2019, Kim 2019),
+and the only kind of cue that reliably moves an established bump
+(excitation alone managed it one time in ten); hold a turn
 button, drag the spring-loaded slider, use the arrow keys, or let the
 webcam steer it (motion on the right of the picture turns right); "Kill
 the bump" wipes every voltage and a new bump forms anyway, at a random
@@ -184,16 +189,24 @@ bump, and it collapses when released); the cells need a 6-step synaptic
 time constant and a 20 % spread of thresholds (identical cells fire in
 lock-step, all go refractory together, and the ring dies); the recurrent
 gain has a narrow window (too low and the bump dies, too high and it
-pins to a wedge and refuses to turn); and each wedge's cell count is
+pins to a wedge and refuses to turn); each wedge's cell count is
 equalised (this fly has 2, 3 or 4 EPGs per wedge, and the bump slides
-toward the loud ones otherwise). Gains live in `data/compass/params.json`,
-found by `scripts/04_tune_compass.py --robust`.
+toward the loud ones otherwise); and every cell of a type gets its
+type's average *mix* of input pathways — share from EPGs, left-bridge
+PENs, right-bridge PENs, PEGs — while the connectome still decides which
+cells feed it (recipes that differ cell to cell gave the bump favourite
+headings; equalising them cut the drift of a released bump by a third and
+removed the occasional silent step). Gains live in
+`data/compass/params.json`, found by `scripts/04_tune_compass.py --robust`;
+`scripts/probe_cue.py` measures how reliably a landmark relocates the bump.
 
 Two honest artefacts: the 18-wedge ring pins like a lattice, so pushes
 below ~40 % of full scale do not move the bump at all (the page lifts
-small commands over that dead zone); and one fly's wiring has favourite
-headings that the bump drifts toward over ten seconds or so. A real fly
-has visual and self-motion inputs anchoring it; this one has you.
+small commands over that dead zone); and one fly's wiring still has
+favourite headings that a released bump drifts toward — about 30° over
+ten seconds, in the median — as a real fly's compass drifts in darkness.
+A real fly has vision and self-motion anchoring it; this one has you and
+your landmarks.
 
 ## The learning centre — Pavlov in the mushroom body
 

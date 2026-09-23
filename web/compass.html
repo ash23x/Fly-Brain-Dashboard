@@ -88,7 +88,7 @@
       <span><span class="sw" style="background:var(--d7)"></span>inner band: Delta7 inhibition (lights up <i>opposite</i> the bump)</span>
       <span><span class="sw" style="background:#fff"></span>needle: population vector of EPG firing</span>
     </div>
-    <div class="hint"><b>Click anywhere on the ring</b> to drop a landmark there (the visual system's job) — the bump jumps to it. Then hold a turn button, drag the slider, or use <kbd>←</kbd> <kbd>→</kbd>: the bump slides round. Let go: it <b>stays</b>. Nothing is stored anywhere — no weight changes, no variable holds "heading". The geometry of the wiring holds it.</div>
+    <div class="hint"><b>Click anywhere on the ring</b> to drop a landmark there (the visual system's job) — the bump jumps to it and stays anchored while the landmark is in view. Hold a turn button, drag the slider, or use <kbd>←</kbd> <kbd>→</kbd>: the landmark is gone and the bump slides round. Let go: it <b>stays</b> — held by nothing but the wiring, and in the dark it drifts slowly toward this fly's favourite headings, as a real fly's compass drifts in darkness. Nothing is stored anywhere — no weight changes, no variable holds "heading". The geometry of the wiring holds it.</div>
   </div>
 
   <div class="card controls-card">
@@ -238,6 +238,14 @@ function drawRing() {
     rctx.beginPath(); rctx.moveTo(cx, cy); rctx.lineTo(cx + len * Math.cos(a), cy + len * Math.sin(a)); rctx.stroke();
     rctx.shadowBlur = 0;
     rctx.beginPath(); rctx.arc(cx, cy, 4, 0, Math.PI * 2); rctx.fillStyle = '#fff'; rctx.fill();
+  }
+  // the landmark, while it is in view (it vanishes when the fly turns)
+  if (latest && latest.landmark != null) {
+    const a = toRad(latest.landmark);
+    rctx.beginPath(); rctx.arc(cx + (R + 9) * Math.cos(a), cy + (R + 9) * Math.sin(a), 5, 0, Math.PI * 2);
+    rctx.fillStyle = 'rgba(125,211,252,0.9)'; rctx.fill();
+    rctx.beginPath(); rctx.moveTo(cx + (R + 3) * Math.cos(a), cy + (R + 3) * Math.sin(a)); rctx.lineTo(cx + (R + 15) * Math.cos(a), cy + (R + 15) * Math.sin(a));
+    rctx.strokeStyle = 'rgba(125,211,252,0.9)'; rctx.lineWidth = 2; rctx.stroke();
   }
   // landmark flash
   if (cueFlash && performance.now() - cueFlash.t < 1200) {
