@@ -18,8 +18,21 @@
   h1 { font-size: 20px; margin: 0 0 4px 0; background: linear-gradient(90deg, var(--primary), var(--secondary));
        -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
   .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
-  .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr); gap: 16px; }
-  @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .brain-card { order: 2; }
+  /* the controls card runs full width under the Kenyon cells and the brain:
+     the experiment on the left, the numbers and the rule on the right */
+  .controls-card { order: 3; grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+                   column-gap: 28px; align-items: start; }
+  .controls-card > h2 { grid-column: 1 / -1; }
+  .controls-card > .controls { grid-column: 1; grid-row: 2 / 4; }
+  .controls-card > .stats { grid-column: 2; grid-row: 2; }
+  .controls-card > .hint { grid-column: 2; grid-row: 3; }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .controls-card { grid-column: auto; display: block; }
+    .controls-card > .stats { margin-top: 14px; }
+  }
   .card { background: var(--panel); border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
           border: 1px solid var(--border); min-width: 0; }
   .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px 0; }
@@ -85,7 +98,7 @@
     <div class="hint">All 4,064 Kenyon cells, one square each. An odour is a set of 13 olfactory glomeruli; a Kenyon cell fires only when several of its five-or-so projection-neuron inputs agree, and the APL neuron's feedback keeps it to a few per cent of cells — so each odour lights a different constellation. <b>Those constellations are what the fly learns about.</b></div>
   </div>
 
-  <div class="card">
+  <div class="card controls-card">
     <h2>Controls — the experiment</h2>
     <div class="controls">
       <div class="row">
@@ -107,7 +120,7 @@
         <div class="line"><span class="name">What it thinks of</span><span style="flex:1;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"><span>← avoid</span><span>approach →</span></span><span class="val"></span></div>
       </div>
     </div>
-    <div style="margin-top:14px;">
+    <div class="stats">
       <div class="stat-row"><span>Neurons (PN / KC / MBON / dopamine)</span><span id="statNeurons">—</span></div>
       <div class="stat-row"><span>Synaptic connections · plastic ones</span><span id="statEdges">—</span></div>
       <div class="stat-row"><span>Kenyon cells firing now</span><span id="statKC">—</span></div>
@@ -119,11 +132,10 @@
       <b>What is real:</b> every cell, transmitter and synapse count; which dopamine class covers which MBON (read from the wiring, not hand-labelled). <b>What is tuned:</b> a handful of gains. <b>What is new:</b> this is the first thing on this box that learns — and it learns at the one synapse evolution made plastic. Keys: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> odours, <kbd>0</kbd> air, hold <kbd>S</kbd> sugar, <kbd>X</kbd> shock.
     </div>
   </div>
-</div>
 
-<div class="card" style="margin-top:16px;">
+  <div class="card brain-card">
   <h2>The brain in 3D — all 4,733 cells, their real shapes, lit by the simulation</h2>
-  <canvas id="brain" style="height:560px; cursor:grab;"></canvas>
+  <canvas id="brain" style="aspect-ratio:1/1; max-height:560px; cursor:grab;"></canvas>
   <div class="legend">
     <span><span class="sw" style="background:#b8a24a"></span>Kenyon cells, γ lobe</span>
     <span><span class="sw" style="background:#5a8ad6"></span>Kenyon cells, α/β</span>
@@ -137,6 +149,7 @@
     <span style="margin-left:auto; display:inline-flex; align-items:center; gap:8px;"><label for="brainBright" style="font-size:12px;">brightness</label><input type="range" id="brainBright" min="10" max="100" value="50" style="width:120px;"></span>
   </div>
   <div class="hint">The reconstructed skeletons of every neuron in the simulation. Present an odour and the projection neurons flash first, then a sparse scatter of Kenyon cells lights up along the lobes — that is the odour, written in cells. Hold sugar and the PAM neurons blaze across the horizontal lobes; hold shock and the PPL1 neurons do. <b>Drag</b> to turn, <b>scroll</b> to zoom.</div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:16px;">
@@ -247,6 +260,7 @@ function indexNeurons(list) {
   if (!brain) {
     brain = Brain3D.attach($('brain'), brainColour);
     if (brain) brain.bindBrightness($('brainBright'));
+    if (brain) brain.onStatus = (t) => { $('brainStatus').textContent = t; };
     if (brain) brain.load(list).then(meta => {
       $('brainStatus').textContent = `${meta.n_segments.toLocaleString()} line segments from ${meta.n_neurons - meta.missing_skeletons} skeletons`;
     }).catch(() => { $('brainStatus').textContent = 'no skeletons yet — run scripts/06_fetch_skeletons.py mushroom, then 07_build_skeletons.py mushroom'; });

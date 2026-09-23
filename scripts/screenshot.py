@@ -1,17 +1,20 @@
 """Screenshot a live dashboard page with headless Chrome, waiting for the
 WebSocket to connect and the canvases to draw (plain --screenshot doesn't).
 
-    python scripts/screenshot.py http://localhost:8765/ docs/compass.png [wait_seconds]
+    python scripts/screenshot.py http://localhost:8765/ docs/compass.png [wait_seconds] [css-selector]
+
+Set SHOT_HEIGHT (default 1180) for a taller capture.
 """
-import asyncio, base64, json, pathlib, subprocess, sys, time
+import asyncio, base64, json, os, pathlib, subprocess, sys, time
 import aiohttp
 
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 PORT = 9333
+WIDTH, HEIGHT = 1280, int(os.environ.get("SHOT_HEIGHT", "1180"))
 
 async def main(url: str, out: str, wait: float, selector: str | None = None) -> None:
     proc = subprocess.Popen([CHROME, "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--hide-scrollbars",
-                             "--window-size=1280,1180", f"--remote-debugging-port={PORT}",
+                             f"--window-size={WIDTH},{HEIGHT}", f"--remote-debugging-port={PORT}",
                              "--user-data-dir=" + str(pathlib.Path.home() / ".fly-shot-profile"), "about:blank"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -34,7 +37,7 @@ async def main(url: str, out: str, wait: float, selector: str | None = None) -> 
                         m = json.loads((await ws.receive()).data)
                         if m.get("id") == msg_id:
                             return m.get("result", {})
-                await cmd("Emulation.setDeviceMetricsOverride", width=1280, height=1180, deviceScaleFactor=1, mobile=False)
+                await cmd("Emulation.setDeviceMetricsOverride", width=WIDTH, height=HEIGHT, deviceScaleFactor=1, mobile=False)
                 await cmd("Network.enable")
                 await cmd("Network.setCacheDisabled", cacheDisabled=True)
                 await cmd("Page.navigate", url=url)

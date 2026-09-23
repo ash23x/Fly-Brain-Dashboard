@@ -101,7 +101,8 @@ Python 3.10+, numpy, scipy, pandas, pyarrow, aiohttp, requests. No GPU.
   <sub>All 4,733 cells of the learning centre, their real shapes, mid-shock: the punishment dopamine neurons blaze across the lobes while odour B's Kenyon cells fire beneath them.</sub>
 </p>
 
-Run the two optional skeleton steps and each page grows a third panel:
+Run the two optional skeleton steps and each page grows a second panel,
+beside the ring or the Kenyon-cell grid:
 the actual reconstructed shapes of every neuron in that simulation —
 skeletons from the same Janelia release as the wiring, fetched by body
 ID from the same public bucket, nothing else — drawn in raw WebGL and
@@ -115,7 +116,11 @@ shader, one draw call, two one-pixel-high textures (each cell's colour,
 each cell's glow), and the glow texture rewritten every frame from the
 spike feed. Skeletons are simplified on the way in (branch points and
 tips kept, wiggles under 1.5 µm dropped): the compass is 136,000 line
-segments, the learning centre a few million.
+segments, the learning centre a few million. If the browser drops the
+WebGL context — Firefox on Windows does this more readily than Chrome,
+typically mid-zoom — the panel keeps its arrays on the CPU side,
+rebuilds everything on the GPU when the context comes back, and says
+so in its status line.
 
 ## The compass — a ring attractor on the real wiring
 

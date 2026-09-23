@@ -19,8 +19,21 @@
        -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
   .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
   .sub a { color: var(--text-2); }
-  .grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); gap: 16px; }
-  @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .brain-card { order: 2; }
+  /* the controls card runs full width under the ring and the brain: controls on the
+     left, the numbers and the notes on the right; the three big readouts span the top */
+  .controls-card { order: 3; grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+                   column-gap: 28px; align-items: start; }
+  .controls-card > h2, .controls-card > .big { grid-column: 1 / -1; }
+  .controls-card > .controls { grid-column: 1; grid-row: 3 / 5; }
+  .controls-card > .stats { grid-column: 2; grid-row: 3; margin-top: 12px; }
+  .controls-card > .hint { grid-column: 2; grid-row: 4; }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .controls-card { grid-column: auto; display: block; }
+    .controls-card > .stats { margin-top: 14px; }
+  }
   .card { background: var(--panel); border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
           border: 1px solid var(--border); min-width: 0; }
   .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px 0; }
@@ -78,7 +91,7 @@
     <div class="hint"><b>Click anywhere on the ring</b> to drop a landmark there (the visual system's job) — the bump jumps to it. Then hold a turn button, drag the slider, or use <kbd>←</kbd> <kbd>→</kbd>: the bump slides round. Let go: it <b>stays</b>. Nothing is stored anywhere — no weight changes, no variable holds "heading". The geometry of the wiring holds it.</div>
   </div>
 
-  <div class="card">
+  <div class="card controls-card">
     <h2>Controls</h2>
     <div class="big">
       <div><div class="k">Heading</div><div class="v"><span id="headingValue">—</span><small>°</small></div></div>
@@ -102,7 +115,7 @@
       <video id="video" autoplay muted playsinline></video>
       <div id="webcamDebug" class="hint" style="display:none;"></div>
     </div>
-    <div style="margin-top:14px;">
+    <div class="stats">
       <div class="stat-row"><span>Neurons (EPG / PEN / PEG / Delta7)</span><span id="statNeurons">—</span></div>
       <div class="stat-row"><span>Synaptic connections between them</span><span id="statEdges">—</span></div>
       <div class="stat-row"><span>Mean EPG firing (spikes / step)</span><span id="statRate">—</span></div>
@@ -115,11 +128,10 @@
       <b>What it cannot do:</b> learn. The wiring is frozen. "Kill the bump" wipes every voltage — and a new bump forms anyway, at a random heading, exactly as it does in a real fly in the dark.
     </div>
   </div>
-</div>
 
-<div class="card" style="margin-top:16px;">
+  <div class="card brain-card">
   <h2>The brain in 3D — the same 152 cells, their real shapes, lit by the simulation</h2>
-  <canvas id="brain" style="height:540px; cursor:grab;"></canvas>
+  <canvas id="brain" style="aspect-ratio:1/1; max-height:560px; cursor:grab;"></canvas>
   <div class="legend">
     <span><span class="sw" style="background:var(--epg)"></span>EPG</span>
     <span><span class="sw" style="background:var(--pen-l)"></span>PEN, left bridge</span>
@@ -130,6 +142,7 @@
     <span style="margin-left:auto; display:inline-flex; align-items:center; gap:8px;"><label for="brainBright" style="font-size:12px;">brightness</label><input type="range" id="brainBright" min="10" max="100" value="50" style="width:120px;"></span>
   </div>
   <div class="hint">These are the reconstructed skeletons of the actual neurons in the simulation, from the same release as the wiring — every arbor is where it was in the animal. A cell flares when it fires. The doughnut is the ellipsoid body, the ring the bump lives on; the arch above it is the protocerebral bridge. <b>Drag</b> to turn it, <b>scroll</b> to zoom; it drifts on its own when left alone. Turn the compass and watch the bump walk round the real ring.</div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:16px;">
@@ -325,6 +338,7 @@ function indexNeurons(list) {
   if (!brain) {
     brain = Brain3D.attach($('brain'), (m) => hexToRgb(ROLE_COLOR[roleKey(m)] || '#9aa0a8'));
     if (brain) brain.bindBrightness($('brainBright'));
+    if (brain) brain.onStatus = (t) => { $('brainStatus').textContent = t; };
     if (brain) brain.load(list).then(meta => {
       $('brainStatus').textContent = `${meta.n_segments.toLocaleString()} line segments from ${meta.n_neurons} skeletons`;
     }).catch(() => { $('brainStatus').textContent = 'no skeletons yet — run scripts/06_fetch_skeletons.py compass, then 07_build_skeletons.py compass'; });
