@@ -1,5 +1,17 @@
 # Fly Brain — a dead insect's sense of self, running on a PC
 
+<p align="center">
+  <a href="https://fly-brain-ivory.vercel.app/compass"><img src="docs/compass.gif" width="800" alt="The compass running live in a browser: on the left a ring of compass cells with one bright bump of activity and a needle; on the right the real 3D shapes of the same 152 neurons, flickering as they fire. A landmark is dropped and the bump jumps to it; the fly turns and the bump walks round the ring; the turn stops and the bump settles and stays."></a>
+  <br>
+  <sub>The real compass of one dead fruit fly, running live. Drop a landmark and the bump jumps to it; turn, and it walks round the ring; let go, and it settles and stays — nothing anywhere stores the heading but the wiring.</sub>
+</p>
+
+<p align="center">
+  <a href="https://fly-brain-ivory.vercel.app"><img src="https://img.shields.io/badge/%E2%96%B6%20run%20it-in%20your%20browser-7dd3fc?style=for-the-badge" alt="Run it in your browser"></a>
+  <a href="DATA_LICENSE.md"><img src="https://img.shields.io/badge/connectome-MaleCNS%20v1.0-a78bfa?style=for-the-badge" alt="Connectome: MaleCNS v1.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/code-MIT-6b7280?style=for-the-badge" alt="Code: MIT"></a>
+</p>
+
 *A series that ends with the whole animal switched on. Part 1 is the
 compass — the self. Part 2 is the learning centre — the lesson. Both
 live in this repository, and both **run in your browser** at
@@ -27,7 +39,8 @@ back on, as spiking simulations, in plain Python, on a CPU:
 - **The compass.** 152 neurons that tell a fly which way it is facing.
   A bump of activity sits on a ring of cells; the bump *is* the heading.
   Steer it with your hand, let go, and it holds — for as long as you
-  care to watch. Nothing is stored. No weight changes. No variable holds
+  care to watch, give or take a drift toward this fly's favourite
+  headings. Nothing is stored. No weight changes. No variable holds
   "heading". The wiring's geometry holds it. **Memory without learning.**
 - **The learning centre.** 4,733 neurons of the mushroom body, with the
   one synapse type the animal makes plastic. Show it an odour, give it
@@ -311,13 +324,29 @@ Side quests on the way: a virtual MIDI port so the needle drives a synth
 (an LFO with memory), and a reservoir-computing readout that uses the
 frozen wiring as a feature extractor for real signals.
 
+## How this was made
+
+One physicist and one AI. [Greg Ashley](https://github.com/ash23x) — a
+biosensor physicist (PhD, 25 years of MEMS and RF devices), not a
+neuroscientist and not a web developer — chose the questions and made the
+calls: which circuits, what was boring, what was a bug, what counted as
+honest. The code was written by Claude, Anthropic's AI, working on his
+machine over a few days in September 2026; the commits say so. Every
+modelling choice is written up above, with what is real and what is
+ours, because a simulation nobody can check is only an animation.
+
 ## Credits and licences
 
 Data: MaleCNS v1.0, CC-BY 4.0 — see `DATA_LICENSE.md`. Code: MIT, see
 `LICENSE`. Images: the whole-CNS render is MaleCNS / Janelia Research
 Campus (HHMI), CC BY 4.0; the central-complex render is the FlyWire
 Consortium (flywire.ai), CC BY-NC 4.0 — both are reproduced with credit
-and are **not** under this repository's MIT licence. The two dashboard
-screenshots are ours. Background reading: Seelig & Jayaraman 2015; Kim et al. 2017;
+and are **not** under this repository's MIT licence. The dashboard
+screenshots and the animation at the top are ours (`scripts/record_demo.py`
+records it from the live site). Background reading: Seelig & Jayaraman 2015; Kim et al. 2017;
 Hulse et al. 2021; Kakaria & de Bivort 2017; Aso et al. 2014; Hige et al.
 2015; Handler et al. 2019; Shiu et al. 2024.
+
+---
+
+<p align="center"><sub>If the fly's compass did something to you, a ⭐ helps the next person find it.</sub></p>
